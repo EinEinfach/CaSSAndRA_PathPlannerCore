@@ -10,8 +10,38 @@ namespace Planner
         if (!file.is_open())
             return;
 
+        // Alle Punkte sammeln, um die Grenzen (Bounding Box) zu finden
+        double minX = 1e10, minY = 1e10, maxX = -1e10, maxY = -1e10;
+        auto updateBounds = [&](double x, double y)
+        {
+            if (x < minX)
+                minX = x;
+            if (y < minY)
+                minY = y;
+            if (x > maxX)
+                maxX = x;
+            if (y > maxY)
+                maxY = y;
+        };
+
+        // Perimeter prüfen
+        for (const auto &p : env.getPerimeter().getPoints())
+            updateBounds(p.x, p.y);
+
+        // Skalierung und Puffer
+        double scale = 20.0;
+        double padding = 20.0;
+
+        // Die viewBox berechnet sich nun aus den tatsächlichen Daten
+        // Format: min_x min_y width height
+        double vbX = minX * scale - padding;
+        double vbY = minY * scale - padding;
+        double vbW = (maxX - minX) * scale + 2 * padding;
+        double vbH = (maxY - minY) * scale + 2 * padding;
+
         // SVG Header (wir skalieren alles mal 20 für bessere Sichtbarkeit)
-        file << "<svg viewBox=\"-10 -10 500 300\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+        file << "<svg viewBox=\"" << vbX << " " << vbY << " " << vbW << " " << vbH
+             << "\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background: #fafafa\">\n";
 
         //
         // 1. Perimeter zeichnen (Grau ausgefüllt)
