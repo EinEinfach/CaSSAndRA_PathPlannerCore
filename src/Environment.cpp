@@ -28,4 +28,15 @@ namespace Planner
     const std::vector<Polygon>& Environment::getObstacles() const{
         return obstacles;
     }
+
+    void Environment::rotate(double angleRad) {
+        perimeter.rotate(angleRad);
+        
+        for (auto& obs : obstacles) {
+            obs.rotate(angleRad);
+        }
+
+        virtualWire.rotate(angleRad);
+        dockingWire.rotate(angleRad);
+    }
 }

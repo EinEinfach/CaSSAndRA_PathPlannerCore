@@ -1,5 +1,6 @@
 #include "Geometry.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace Planner
 {
@@ -16,6 +17,12 @@ namespace Planner
     const std::vector<Point> &LineString::getPoints() const
     {
         return points;
+    }
+
+    void LineString::rotate(double angleRad) {
+        for (auto& p : points) {
+            p = GeometryUtils::rotatePoint(p, angleRad);
+        }
     }
 
     bool Polygon::isClosed() const
@@ -73,6 +80,21 @@ namespace Planner
             }
         }
         return inside;
+    }
+
+    double GeometryUtils::degToRad(double deg) {
+        return deg * M_PI / 180;
+    }
+
+    Point GeometryUtils::rotatePoint(Point p, double angleRad) {
+        double cosA = std::cos(angleRad);
+        double sinA = std::sin(angleRad);
+
+        double newX = p.x * cosA - p.y * sinA;
+        double newY = p.x * sinA + p.y * cosA;
+
+        return {newX, newY};
+
     }
 
 }

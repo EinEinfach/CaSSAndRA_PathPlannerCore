@@ -14,6 +14,9 @@ using Planner::Visualizer;
 int main() {
     std::cout << "--- Initialisiere Geometrie-basiertes Environment ---" << std::endl;
 
+    double offset = 0.8;
+    double angle = 0.0;
+
     Polygon perimeter = {{0.0, 0.0}, {20.0, 0.0}, {20.0, 10.0}, {0.0, 10.0}};
 
     auto myEnv = Environment{perimeter};
@@ -29,8 +32,10 @@ int main() {
 
     LineString dWire = {{2.0, 2.0}, {1.0, 1.0}, {0.0, 0.0}};
     myEnv.setVirtualWire(dWire);
+    myEnv.rotate(angle);
 
-    auto slices = PathPlanner::generateSlices(myEnv, 0.2);
+    auto slices = PathPlanner::generateSlices(myEnv, offset);
+    myEnv.rotate(-angle);
 
     Visualizer::exportToSVG("test_map.svg", myEnv, {}, slices);
 

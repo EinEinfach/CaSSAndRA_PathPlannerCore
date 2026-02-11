@@ -23,6 +23,8 @@ namespace Planner
 
         const std::vector<Point> &getPoints() const;
 
+        void rotate(double angleRad);
+
     protected:
         std::vector<Point> points;
     };
@@ -43,5 +45,11 @@ namespace Planner
         
         // Prüft ob der Punkt innerhalb des Polygons liegt
         static bool isPointInPolygon(Point p, const Polygon& poly);
+
+        // Rotiert einen Punkt um den Ursprung
+        static Point rotatePoint(Point p, double angleRad);
+
+        // Hilfsmethode zu Umrechnung Deg zu Rad
+        static double degToRad(double deg);
     };
 };

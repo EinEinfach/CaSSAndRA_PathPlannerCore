@@ -16,6 +16,8 @@ namespace Planner
         const Polygon& getPerimeter() const;
         const std::vector<Polygon>& getObstacles() const;
 
+        void rotate(double angleRad);
+
     private:
         Polygon perimeter;
         std::vector<Polygon> obstacles;
