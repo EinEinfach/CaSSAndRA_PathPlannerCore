@@ -4,10 +4,10 @@
 
 namespace Planner
 {
-    class Enviroment
+    class Environment
     {
     public:
-        Enviroment(Polygon perimeter); 
+        Environment(Polygon perimeter); 
         void addObstacle(const Polygon &obs); 
 
         void setVirtualWire(const LineString &wire);

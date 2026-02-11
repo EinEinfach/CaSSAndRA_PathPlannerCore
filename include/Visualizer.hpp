@@ -1,5 +1,5 @@
 #pragma once
-#include "Enviroment.hpp"
+#include "Environment.hpp"
 #include <string>
 
 namespace Planner
@@ -7,6 +7,6 @@ namespace Planner
     class Visualizer
     {
         public:
-        static void exportToSVG(const std::string &filename, const Enviroment &env, const LineString &path = {});
+        static void exportToSVG(const std::string& filename, const Environment& env, const LineString& path = {}, const std::vector<LineString>& slices = {});
     };
 }

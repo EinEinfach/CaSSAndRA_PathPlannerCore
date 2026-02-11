@@ -1,31 +1,31 @@
-#include "Enviroment.hpp"
+#include "Environment.hpp"
 
 namespace Planner
 {
-    Enviroment::Enviroment(Polygon perimeter) : perimeter(perimeter) {
+    Environment::Environment(Polygon perimeter) : perimeter(perimeter) {
                                                     // Add Validierungen, ist Perimeter geschlossen oder gibt es selbstüberscheidungen
                                                 };
 
-    void Enviroment::addObstacle(const Polygon &obs)
+    void Environment::addObstacle(const Polygon &obs)
     {
         obstacles.push_back(obs);
     }
 
-    void Enviroment::setVirtualWire(const LineString &wire)
+    void Environment::setVirtualWire(const LineString &wire)
     {
         virtualWire = wire;
     }
 
-    void Enviroment::setDockingWire(const LineString &wire)
+    void Environment::setDockingWire(const LineString &wire)
     {
         dockingWire = wire;
     }
 
-    const Polygon& Enviroment::getPerimeter() const{
+    const Polygon& Environment::getPerimeter() const{
         return perimeter;
     }
 
-    const std::vector<Polygon>& Enviroment::getObstacles() const{
+    const std::vector<Polygon>& Environment::getObstacles() const{
         return obstacles;
     }
 }
