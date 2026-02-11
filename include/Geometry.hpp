@@ -40,5 +40,8 @@ namespace Planner
         // Prüft, ob und wo sich zwei Liniensegmente (A-B und C-D) schneiden
         // Gibt true zurück, wenn sie sich schneiden, und schreibt das Ergebnis in intersectionPoint
         static bool getIntersection(Point a, Point b, Point c, Point d, Point &out);
+        
+        // Prüft ob der Punkt innerhalb des Polygons liegt
+        static bool isPointInPolygon(Point p, const Polygon& poly);
     };
 };

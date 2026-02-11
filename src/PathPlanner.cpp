@@ -56,14 +56,34 @@ namespace Planner
             std::sort(x_intersections.begin(), x_intersections.end());
 
             // 4. Paare bilden (Die Logik: Perimeter_In -> Obstacle_In -> Obstacle_Out -> Perimeter_Out)
-            // Das funktioniert nur, wenn die Hindernisse komplett im Perimeter liegen!
-            for (size_t i = 0; i + 1 < x_intersections.size(); i += 2)
+            // Jedes Segment zwischen zwei Schnittpunkten prüfen
+            for (size_t i = 0; i + 1 < x_intersections.size(); ++i)
             {
                 double xStart = x_intersections[i];
                 double xEnd = x_intersections[i + 1];
 
-                // Nur hinzufügen, wenn die Strecke nicht winzig ist (numerische Stabilität)
-                if (std::abs(xEnd - xStart) > 1e-7)
+                if (std::abs(xEnd - xStart) < 1e-7)
+                    continue;
+
+                // Testpunkt in der Mitte des Segments
+                Point midPoint = {(xStart + xEnd) / 2.0, y};
+
+                // Ist die Mitte im Perimeter?
+                bool inPerimeter = GeometryUtils::isPointInPolygon(midPoint, env.getPerimeter());
+
+                // Ist die Mitte in IRGENDEINEM Hindernis?
+                bool inObstacle = false;
+                for (const auto &obs : env.getObstacles())
+                {
+                    if (GeometryUtils::isPointInPolygon(midPoint, obs))
+                    {
+                        inObstacle = true;
+                        break;
+                    }
+                }
+
+                // Nur wenn im Perimeter UND NICHT im Hindernis
+                if (inPerimeter && !inObstacle)
                 {
                     LineString slice;
                     slice.addPoint({xStart, y});

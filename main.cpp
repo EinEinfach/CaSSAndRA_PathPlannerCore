@@ -18,8 +18,11 @@ int main() {
 
     auto myEnv = Environment{perimeter};
 
-    Polygon obstacle = {{5.0, 2.0}, {7.0, 2.0}, {7.0, 4.0}, {5.0, 4.5}};
-    myEnv.addObstacle(obstacle);
+    Polygon obstacle1 = {{5.0, 2.0}, {7.0, 2.0}, {7.0, 4.0}, {5.0, 4.5}};
+    Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
+
+    myEnv.addObstacle(obstacle1);
+    myEnv.addObstacle(obstacle2);
 
     LineString vWire = {{0.0, 9.5}, {20.0, 9.5}};
     myEnv.setVirtualWire(vWire);
