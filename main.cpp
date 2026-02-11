@@ -14,7 +14,7 @@ using Planner::Visualizer;
 int main() {
     std::cout << "--- Initialisiere Geometrie-basiertes Environment ---" << std::endl;
 
-    double offset = 0.8;
+    double offset = 0.5;
     double angle = 0.0;
 
     Polygon perimeter = {{0.0, 0.0}, {20.0, 0.0}, {20.0, 10.0}, {0.0, 10.0}};
@@ -35,9 +35,11 @@ int main() {
     myEnv.rotate(angle);
 
     auto slices = PathPlanner::generateSlices(myEnv, offset);
+    auto fullPath = PathPlanner::connectSlices(slices);
     myEnv.rotate(-angle);
+    fullPath.rotate(-angle);
 
-    Visualizer::exportToSVG("test_map.svg", myEnv, {}, slices);
+    Visualizer::exportToSVG("test_map.svg", myEnv, fullPath, {});
 
     std::cout << "Setup erfolgreich: Perimeter, Hindernis und Draehte geladen." << std::endl;
 }

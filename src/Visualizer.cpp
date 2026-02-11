@@ -71,7 +71,7 @@ namespace Planner
             {
                 file << p.x * 20 << "," << p.y * 20 << " ";
             }
-            file << "\" fill=\"none\" stroke=\"blue\" stroke-width=\"1\" stroke-dasharray=\"2,1\" />\n";
+            file << "\" fill=\"none\" stroke=\"blue\" stroke-width=\"0.3\" stroke-dasharray=\"2,1\" />\n";
         }
 
         // 4. Die slices zeichnen (Grün) optional

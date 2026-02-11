@@ -51,5 +51,8 @@ namespace Planner
 
         // Hilfsmethode zu Umrechnung Deg zu Rad
         static double degToRad(double deg);
+
+        // Prüft ob die Linie einen Polygon schneidet
+        static bool isLineIntersectingPolygon(Point p1, Point p2, const Polygon& poly);
     };
 };

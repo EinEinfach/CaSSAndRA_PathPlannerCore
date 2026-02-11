@@ -94,7 +94,18 @@ namespace Planner
         double newY = p.x * sinA + p.y * cosA;
 
         return {newX, newY};
+    }
 
+    bool GeometryUtils::isLineIntersectingPolygon(Point p1, Point p2, const Polygon& poly) {
+        const auto& pts = poly.getPoints();
+        for (size_t i = 0; i < pts.size(); ++i) {
+            Point intersect;
+            // Prüfe jede Kante des Polygons gegen unsere linie p1-p2
+            if (getIntersection(p1, p2, pts[i], pts[(i + 1) % pts.size()], intersect)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

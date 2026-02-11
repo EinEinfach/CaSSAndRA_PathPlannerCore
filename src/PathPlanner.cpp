@@ -94,4 +94,44 @@ namespace Planner
         }
         return result;
     }
+
+    LineString PathPlanner::connectSlices(std::vector<LineString>& slices) {
+        LineString fullPath;
+        if (slices.empty()) return fullPath;
+
+        bool reverseDirection = false;
+
+        for (auto& slice : slices) {
+            auto pts = slice.getPoints();
+            if (pts.size() < 2) continue;
+
+            // Wenn wir in der "Rückwärts-Phase" des Zick-Zacks sind:
+            if(reverseDirection) {
+                // Punkte in umgekehrter Reihenfolge hinzufügen
+                for (auto it = pts.rbegin(); it != pts.rend(); ++it) {
+                    fullPath.addPoint(*it);
+                }
+            } else {
+                // Punkte in normaler Reihenfolge hinzufügen
+                for (const auto& p : pts) {
+                    fullPath.addPoint(p);
+                }
+            }
+            // Richtung für den nächsten Slice umkehren
+            reverseDirection = !reverseDirection;
+        }
+        return fullPath;
+    }
+
+    bool isPathClear(Point a, Point b, const Environment& env) {
+        for (const auto& obs : env.getObstacles()) {
+            if (GeometryUtils::isLineIntersectingPolygon(a, b, obs)) {
+                return false;
+            }
+        }
+        if (GeometryUtils::isLineIntersectingPolygon(a, b, env.getPerimeter())) {
+            return false;
+        }
+        return true;
+    }
 }
