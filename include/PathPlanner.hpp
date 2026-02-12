@@ -7,8 +7,13 @@ namespace Planner
     class PathPlanner
     {
     public:
+        struct PlanningResult {
+            LineString path;
+            std::vector<LineString> debugLines;
+        };
+        
         static std::vector<LineString> generateSlices(const Environment &env, double spacing);
-        static LineString connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
+        static PlanningResult connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
         static bool isPathClear(Point a, Point b, const Environment &env);
 
     private:

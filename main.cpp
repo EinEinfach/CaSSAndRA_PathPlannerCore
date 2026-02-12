@@ -14,11 +14,11 @@ using Planner::Visualizer;
 int main() {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
-    Point startPos = {3.0, 7.0};
-    double offset = 0.3;
-    double angle = 0.3;
+    Point startPos = {0.0, 0.0};
+    double offset = 0.5;
+    double angle = 0.7;
 
-    Polygon perimeter = {{0.0, 0.0}, {20.0, 0.0}, {20.0, 30.0}, {15.0, 30.0}, {15.0, 25.0}, {10.0, 25.0}, {10.0, 20.0},  {0.0, 10.0}};
+    Polygon perimeter = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0},  {0.0, 10.0}};
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     auto myEnv = Environment{perimeter};
@@ -40,12 +40,19 @@ int main() {
     std::cout << "Generiere Slice..." << std::endl;
     auto slices = PathPlanner::generateSlices(myEnv, offset);
     std::cout << "Verbnde Slice..." << std::endl;
-    auto fullPath = PathPlanner::connectSlices(myEnv, slices, startPos);
+    auto result = PathPlanner::connectSlices(myEnv, slices, startPos);
     std::cout << "Drehe die Environment zurück..." << std::endl;
     myEnv.rotate(-angle);
-    fullPath.rotate(-angle);
+    result.path.rotate(-angle);
+    // Für Visualization
+    for (auto& l : result.debugLines) {
+        l.rotate(-angle);
+    }
+    for (auto& l : slices) {
+        l.rotate(-angle);
+    }
     std::cout << "Schreibe das Ergbnis in ein SVG Format..." << std::endl;
-    Visualizer::exportToSVG("test_map.svg", myEnv, fullPath, {});
+    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, slices); 
 
     std::cout << "Setup erfolgreich!" << std::endl;
 }

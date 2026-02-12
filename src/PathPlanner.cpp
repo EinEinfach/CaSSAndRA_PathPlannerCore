@@ -2,6 +2,7 @@
 #include "Geometry.hpp"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 namespace Planner
 {
@@ -95,29 +96,28 @@ namespace Planner
         }
         return result;
     }
-    LineString PathPlanner::connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos)
+
+    PathPlanner::PlanningResult PathPlanner::connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos)
     {
-        LineString fullPath;
+        PlanningResult result;
         if (slices.empty())
-            return fullPath;
+            return result;
 
         std::vector<bool> visited(slices.size(), false);
         Point currentPos = startPos;
-        fullPath.addPoint(currentPos);
+        result.path.addPoint(currentPos);
 
-        // Wir fangen bei startPos.
         for (size_t count = 0; count < slices.size(); ++count)
         {
-
-            // 1. Finde das nächste erreichbare Segment ausgehend von currentPos (anfangs startPos)
+            // 1. Finde das nächste erreichbare Segment ausgehend von currentPos
+            std::cout << "--- Bin bei Pos (" << currentPos.x << "|" << currentPos.y << ") ---" << std::endl;
             BestNextSegment next = findBestNext(currentPos, slices, visited, env);
 
-            // 2.1 Weg ohne Umweege möglich
+            // 2.1 Weg ohne Umwege möglich
             if (next.index != -1)
             {
-                // 3.1 Segment hinzufügen
                 visited[next.index] = true;
-                addSliceToPath(fullPath, slices[next.index], next.reverse);
+                addSliceToPath(result.path, slices[next.index], next.reverse);
             }
             // 2.2 Weg braucht A*
             else
@@ -127,37 +127,43 @@ namespace Planner
                 {
                     Point goal = next.reverse ? slices[next.index].getPoints().back() : slices[next.index].getPoints().front();
 
+                    // --- DEBUG LINE START ---
+                    // Hier loggen wir die Linie, die findBestNext als "nicht frei" abgelehnt hat
+                    LineString failLine;
+                    failLine.addPoint(currentPos);
+                    failLine.addPoint(goal);
+                    result.debugLines.push_back(failLine);
+                    // --- DEBUG LINE END ---
+
                     // Berechne Umweg um Hindernisse
                     std::vector<Point> bypass = findAStarPath(currentPos, goal, env);
 
-                    // Füge alle Punkte des Umwegs hinzu (außer dem ersten, das ist currentPos)
                     for (size_t i = 1; i < bypass.size(); ++i)
                     {
-                        fullPath.addPoint(bypass[i]);
+                        result.path.addPoint(bypass[i]);
                     }
-                    // 3.2 Segment hinzufügen
+
                     visited[next.index] = true;
-                    addSliceToPath(fullPath, slices[next.index], next.reverse);
+                    addSliceToPath(result.path, slices[next.index], next.reverse);
                 }
             }
-            currentPos = fullPath.getPoints().back();
+            currentPos = result.path.getPoints().back();
         }
 
-        return fullPath;
+        return result;
     }
 
     bool PathPlanner::isPathClear(Point a, Point b, const Environment &env)
     {
         // Ein winziges Stückchen von den Endpunkten weggehen,
         // um numerische Probleme an Ecken zu vermeiden
-        double epsilon = 0.001;
+        double epsilon = 0.01;
         Point dir = {b.x - a.x, b.y - a.y};
         double len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
 
         if (len < epsilon)
             return true;
 
-        // "Eingekürzte" Testpunkte
         Point testA = {a.x + (dir.x / len) * epsilon, a.y + (dir.y / len) * epsilon};
         Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
 
@@ -191,24 +197,73 @@ namespace Planner
                                                            const std::vector<bool> &visited,
                                                            const Environment &env)
     {
+        // BestNextSegment best;
+        // best.distance = 1e10;
+
+        // for (size_t i = 0; i < slices.size(); ++i)
+        // {
+        //     if (visited[i])
+        //         continue;
+
+        //     const auto &pts = slices[i].getPoints();
+        //     Point start = pts.front();
+        //     Point end = pts.back();
+
+        //     double dS = GeometryUtils::calculateDistance(currentPos, start);
+        //     double dE = GeometryUtils::calculateDistance(currentPos, end);
+
+        //     // DEBUG: Wir schauen uns Slice #2 ganz genau an, wenn wir in der Nähe sind
+        //     if (i == 2)
+        //     {
+        //         bool clearS = isPathClear(currentPos, start, env);
+        //         bool clearE = isPathClear(currentPos, end, env);
+        //         std::cout << "DEBUG SLICE #2: DistStart: " << dS << " (Clear: " << clearS
+        //                   << "), DistEnd: " << dE << " (Clear: " << clearE << ")" << std::endl;
+        //     }
+
+        //     if (dS < best.distance && isPathClear(currentPos, start, env))
+        //     {
+        //         best = {(int)i, false, dS};
+        //     }
+        //     if (dE < best.distance && isPathClear(currentPos, end, env))
+        //     {
+        //         best = {(int)i, true, dE};
+        //     }
+        // }
+        // return best;
         BestNextSegment best;
+        best.distance = 1e10; // WICHTIG: Mit sehr hohem Wert starten!
+
         for (size_t j = 0; j < slices.size(); ++j)
         {
             if (visited[j])
                 continue;
 
             const auto &pts = slices[j].getPoints();
-            double dStart = GeometryUtils::calculateDistance(currentPos, pts.front());
-            double dEnd = GeometryUtils::calculateDistance(currentPos, pts.back());
+            if (pts.empty())
+                continue;
 
-            if (dStart < best.distance && isPathClear(currentPos, pts.front(), env))
+            // Wir prüfen Start- und Endpunkt des Slices
+            Point start = pts.front();
+            Point end = pts.back();
+
+            double dStart = GeometryUtils::calculateDistance(currentPos, start);
+            double dEnd = GeometryUtils::calculateDistance(currentPos, end);
+
+            // Wir nehmen das absolut nächste Ende, sofern der Weg frei ist
+            if (dStart < best.distance && isPathClear(currentPos, start, env))
             {
                 best = {(int)j, false, dStart};
             }
-            if (dEnd < best.distance && isPathClear(currentPos, pts.back(), env))
+            if (dEnd < best.distance && isPathClear(currentPos, end, env))
             {
                 best = {(int)j, true, dEnd};
             }
+        }
+        if (best.index != -1)
+        {
+            std::cout << "Entscheidung: Gehe zu Slice #" << best.index
+                      << " (Dist: " << best.distance << ", Reverse: " << (best.reverse ? "Ja" : "Nein") << ")" << std::endl;
         }
         return best;
     }

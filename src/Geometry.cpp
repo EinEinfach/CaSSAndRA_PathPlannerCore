@@ -103,28 +103,91 @@ namespace Planner
     bool GeometryUtils::isLineIntersectingPolygon(Point p1, Point p2, const Polygon &poly)
     {
         const auto &pts = poly.getPoints();
-        if (pts.size() < 3)
+        size_t numPoints = pts.size();
+        if (numPoints < 3)
             return false;
-        // 1. Check auf echte Schnittpunkte
-        for (size_t i = 0; i < pts.size(); ++i)
+
+        // --- TEIL 1: ECHTE SCHNITTPUNKTE PRÜFEN ---
+        for (size_t i = 0; i < numPoints; ++i)
         {
             Point intersect;
-            // Prüfe Segment p1-p2 gegen jede Kante des Hindernisses
-            if (getIntersection(p1, p2, pts[i], pts[(i + 1) % pts.size()], intersect))
+            // Prüfe das Liniensegment p1-p2 gegen die Polygon-Kante (pts[i] bis pts[next])
+            if (getIntersection(p1, p2, pts[i], pts[(i + 1) % numPoints], intersect))
             {
-                // Ein Schnittpunkt wurde gefunden -> Weg ist blockiert!
-                return true;
+                // Ein Schnittpunkt blockiert nur, wenn er NICHT fast identisch
+                // mit den Endpunkten p1 oder p2 ist (Endpunkt-Toleranz 1mm)
+                double distToStart = std::sqrt(std::pow(intersect.x - p1.x, 2) + std::pow(intersect.y - p1.y, 2));
+                double distToEnd = std::sqrt(std::pow(intersect.x - p2.x, 2) + std::pow(intersect.y - p2.y, 2));
+
+                if (distToStart > 0.001 && distToEnd > 0.001)
+                {
+                    return true; // Echter Durchschuss durch eine Kante
+                }
             }
         }
-        // 2. Check liegt die gesamte Linie im Hindernis
+
+        // --- TEIL 2: VOLLSTÄNDIGE LAGE IM HINDERNIS PRÜFEN ---
+        // Wir prüfen den Mittelpunkt, um Linien zu finden, die komplett "drinnen" liegen.
         Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
-        if (isPointInPolygon(midPoint, poly)) {
-            return true;
+
+        if (isPointInPolygon(midPoint, poly))
+        {
+            // Falls isPointInPolygon "true" sagt, prüfen wir, ob wir nur auf der Kante liegen.
+            // Wir berechnen den minimalen Abstand des midPoints zu allen Kanten des Polygons.
+            double minDistanceToEdge = 1e18; // Startwert unendlich
+
+            for (size_t i = 0; i < numPoints; ++i)
+            {
+                Point A = pts[i];
+                Point B = pts[(i + 1) % numPoints];
+
+                // Abstand Punkt zu Segment (A-B)
+                double l2 = std::pow(B.x - A.x, 2) + std::pow(B.y - A.y, 2);
+                double t = ((midPoint.x - A.x) * (B.x - A.x) + (midPoint.y - A.y) * (B.y - A.y)) / l2;
+                t = std::max(0.0, std::min(1.0, t));
+
+                Point projection = {A.x + t * (B.x - A.x), A.y + t * (B.y - A.y)};
+                double dist = std::sqrt(std::pow(midPoint.x - projection.x, 2) + std::pow(midPoint.y - projection.y, 2));
+
+                if (dist < minDistanceToEdge)
+                    minDistanceToEdge = dist;
+            }
+
+            // Wenn der midPoint näher als 1mm an einer Kante liegt, werten wir das
+            // als "auf der Kante gleitend" und NICHT als blockiert.
+            if (minDistanceToEdge < 0.001)
+            {
+                return false;
+            }
+
+            return true; // Der Punkt ist wirklich signifikant tief im Hindernis
         }
+
         return false;
+        // const auto &pts = poly.getPoints();
+        // if (pts.size() < 3)
+        //     return false;
+        // // 1. Check auf echte Schnittpunkte
+        // for (size_t i = 0; i < pts.size(); ++i)
+        // {
+        //     Point intersect;
+        //     // Prüfe Segment p1-p2 gegen jede Kante des Hindernisses
+        //     if (getIntersection(p1, p2, pts[i], pts[(i + 1) % pts.size()], intersect))
+        //     {
+        //         // Ein Schnittpunkt wurde gefunden -> Weg ist blockiert!
+        //         return true;
+        //     }
+        // }
+        // // 2. Check liegt die gesamte Linie im Hindernis
+        // Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
+        // if (isPointInPolygon(midPoint, poly)) {
+        //     return true;
+        // }
+        // return false;
     }
 
-    double GeometryUtils::calculateDistance(Point a, Point b) {
+    double GeometryUtils::calculateDistance(Point a, Point b)
+    {
         return std::sqrt(std::pow(b.x - a.x, 2) + std::pow(b.y - a.y, 2));
     }
 }
