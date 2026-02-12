@@ -103,9 +103,9 @@ namespace Planner
     bool GeometryUtils::isLineIntersectingPolygon(Point p1, Point p2, const Polygon &poly)
     {
         const auto &pts = poly.getPoints();
-        if (pts.size() < 2)
+        if (pts.size() < 3)
             return false;
-
+        // 1. Check auf echte Schnittpunkte
         for (size_t i = 0; i < pts.size(); ++i)
         {
             Point intersect;
@@ -115,6 +115,11 @@ namespace Planner
                 // Ein Schnittpunkt wurde gefunden -> Weg ist blockiert!
                 return true;
             }
+        }
+        // 2. Check liegt die gesamte Linie im Hindernis
+        Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
+        if (isPointInPolygon(midPoint, poly)) {
+            return true;
         }
         return false;
     }
