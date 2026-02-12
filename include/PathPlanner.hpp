@@ -8,7 +8,7 @@ namespace Planner
     {
     public:
         static std::vector<LineString> generateSlices(const Environment &env, double spacing);
-        static LineString connectSlices(std::vector<LineString>& slices);
+        static LineString connectSlices(const Environment& env, std::vector<LineString>& slices);
         static bool isPathClear(Point a, Point b, const Environment& env);
     };
 }

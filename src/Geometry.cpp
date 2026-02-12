@@ -19,8 +19,10 @@ namespace Planner
         return points;
     }
 
-    void LineString::rotate(double angleRad) {
-        for (auto& p : points) {
+    void LineString::rotate(double angleRad)
+    {
+        for (auto &p : points)
+        {
             p = GeometryUtils::rotatePoint(p, angleRad);
         }
     }
@@ -82,11 +84,13 @@ namespace Planner
         return inside;
     }
 
-    double GeometryUtils::degToRad(double deg) {
+    double GeometryUtils::degToRad(double deg)
+    {
         return deg * M_PI / 180;
     }
 
-    Point GeometryUtils::rotatePoint(Point p, double angleRad) {
+    Point GeometryUtils::rotatePoint(Point p, double angleRad)
+    {
         double cosA = std::cos(angleRad);
         double sinA = std::sin(angleRad);
 
@@ -96,12 +100,19 @@ namespace Planner
         return {newX, newY};
     }
 
-    bool GeometryUtils::isLineIntersectingPolygon(Point p1, Point p2, const Polygon& poly) {
-        const auto& pts = poly.getPoints();
-        for (size_t i = 0; i < pts.size(); ++i) {
+    bool GeometryUtils::isLineIntersectingPolygon(Point p1, Point p2, const Polygon &poly)
+    {
+        const auto &pts = poly.getPoints();
+        if (pts.size() < 2)
+            return false;
+
+        for (size_t i = 0; i < pts.size(); ++i)
+        {
             Point intersect;
-            // Prüfe jede Kante des Polygons gegen unsere linie p1-p2
-            if (getIntersection(p1, p2, pts[i], pts[(i + 1) % pts.size()], intersect)) {
+            // Prüfe Segment p1-p2 gegen jede Kante des Hindernisses
+            if (getIntersection(p1, p2, pts[i], pts[(i + 1) % pts.size()], intersect))
+            {
+                // Ein Schnittpunkt wurde gefunden -> Weg ist blockiert!
                 return true;
             }
         }

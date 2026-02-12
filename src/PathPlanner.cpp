@@ -1,6 +1,7 @@
 #include "PathPlanner.hpp"
 #include "Geometry.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace Planner
 {
@@ -94,42 +95,124 @@ namespace Planner
         }
         return result;
     }
-
-    LineString PathPlanner::connectSlices(std::vector<LineString>& slices) {
+    LineString PathPlanner::connectSlices(const Environment &env, std::vector<LineString> &slices)
+    {
         LineString fullPath;
-        if (slices.empty()) return fullPath;
+        if (slices.empty())
+            return fullPath;
 
-        bool reverseDirection = false;
+        std::vector<bool> visited(slices.size(), false);
 
-        for (auto& slice : slices) {
-            auto pts = slice.getPoints();
-            if (pts.size() < 2) continue;
+        // Startpunkt: Wir nehmen den ersten Punkt vom ersten Slice
+        visited[0] = true;
+        for (const auto &p : slices[0].getPoints())
+            fullPath.addPoint(p);
+        Point currentPos = slices[0].getPoints().back();
 
-            // Wenn wir in der "Rückwärts-Phase" des Zick-Zacks sind:
-            if(reverseDirection) {
-                // Punkte in umgekehrter Reihenfolge hinzufügen
-                for (auto it = pts.rbegin(); it != pts.rend(); ++it) {
-                    fullPath.addPoint(*it);
+        for (size_t count = 1; count < slices.size(); ++count)
+        {
+            int bestNext = -1;
+            double bestDist = 1e10;
+            bool bestReverse = false;
+
+            for (size_t j = 0; j < slices.size(); ++j)
+            {
+                if (visited[j])
+                    continue;
+
+                const auto &pts = slices[j].getPoints();
+                Point start = pts.front();
+                Point end = pts.back();
+
+                // Wir testen: currentPos -> start (normal abfahren)
+                double dStart = std::sqrt(std::pow(start.x - currentPos.x, 2) + std::pow(start.y - currentPos.y, 2));
+                // Wir testen: currentPos -> end (rückwärts abfahren)
+                double dEnd = std::sqrt(std::pow(end.x - currentPos.x, 2) + std::pow(end.y - currentPos.y, 2));
+
+                // Favorisiere den Punkt, der frei erreichbar ist
+                if (isPathClear(currentPos, start, env))
+                {
+                    if (dStart < bestDist)
+                    {
+                        bestDist = dStart;
+                        bestNext = j;
+                        bestReverse = false;
+                    }
                 }
-            } else {
-                // Punkte in normaler Reihenfolge hinzufügen
-                for (const auto& p : pts) {
-                    fullPath.addPoint(p);
+                if (isPathClear(currentPos, end, env))
+                {
+                    if (dEnd < bestDist)
+                    {
+                        bestDist = dEnd;
+                        bestNext = j;
+                        bestReverse = true;
+                    }
                 }
             }
-            // Richtung für den nächsten Slice umkehren
-            reverseDirection = !reverseDirection;
+
+            // Wenn wir einen freien Weg gefunden haben:
+            if (bestNext != -1)
+            {
+                visited[bestNext] = true;
+                const auto &nextPts = slices[bestNext].getPoints();
+                if (bestReverse)
+                {
+                    for (auto it = nextPts.rbegin(); it != nextPts.rend(); ++it)
+                        fullPath.addPoint(*it);
+                    currentPos = nextPts.front();
+                }
+                else
+                {
+                    for (const auto &p : nextPts)
+                        fullPath.addPoint(p);
+                    currentPos = nextPts.back();
+                }
+            }
+            else
+            {
+                // NOTFALL: Wenn kein Weg frei ist, nimm den absolut nächsten unbesuchten
+                // (Hier wird die Linie später durch das Obstacle gehen, bis wir A* haben)
+                for (size_t j = 0; j < slices.size(); ++j)
+                {
+                    if (!visited[j])
+                    {
+                        visited[j] = true;
+                        const auto &pts = slices[j].getPoints();
+                        // Einfachste Distanz entscheiden (Zick-Zack Erhaltung)
+                        double dS = std::sqrt(std::pow(pts.front().x - currentPos.x, 2) + std::pow(pts.front().y - currentPos.y, 2));
+                        double dE = std::sqrt(std::pow(pts.back().x - currentPos.x, 2) + std::pow(pts.back().y - currentPos.y, 2));
+
+                        if (dE < dS)
+                        {
+                            for (auto it = pts.rbegin(); it != pts.rend(); ++it)
+                                fullPath.addPoint(*it);
+                            currentPos = pts.front();
+                        }
+                        else
+                        {
+                            for (const auto &p : pts)
+                                fullPath.addPoint(p);
+                            currentPos = pts.back();
+                        }
+                        break;
+                    }
+                }
+            }
         }
         return fullPath;
     }
 
-    bool isPathClear(Point a, Point b, const Environment& env) {
-        for (const auto& obs : env.getObstacles()) {
-            if (GeometryUtils::isLineIntersectingPolygon(a, b, obs)) {
+    bool PathPlanner::isPathClear(Point a, Point b, const Environment &env)
+    {
+        for (const auto &obs : env.getObstacles())
+        {
+            if (GeometryUtils::isLineIntersectingPolygon(a, b, obs))
+            {
                 return false;
             }
         }
-        if (GeometryUtils::isLineIntersectingPolygon(a, b, env.getPerimeter())) {
+        if (GeometryUtils::isLineIntersectingPolygon(a, b, env.getPerimeter()))
+        {
             return false;
         }
         return true;
