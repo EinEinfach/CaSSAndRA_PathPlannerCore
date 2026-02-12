@@ -8,7 +8,19 @@ namespace Planner
     {
     public:
         static std::vector<LineString> generateSlices(const Environment &env, double spacing);
-        static LineString connectSlices(const Environment& env, std::vector<LineString>& slices);
-        static bool isPathClear(Point a, Point b, const Environment& env);
+        static LineString connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
+        static bool isPathClear(Point a, Point b, const Environment &env);
+
+    private:
+        struct BestNextSegment
+        {
+            int index = -1;
+            bool reverse = false;
+            double distance = 1e10;
+        };
+
+        static BestNextSegment findBestNext(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited, const Environment &env);
+        static BestNextSegment findBestNextFallback(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited);
+        static void addSliceToPath(LineString &path, const LineString &slice, bool reverse);
     };
 }

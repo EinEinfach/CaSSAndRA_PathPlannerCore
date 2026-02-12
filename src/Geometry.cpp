@@ -119,4 +119,7 @@ namespace Planner
         return false;
     }
 
+    double GeometryUtils::calculateDistance(Point a, Point b) {
+        return std::sqrt(std::pow(b.x - a.x, 2) + std::pow(b.y - a.y, 2));
+    }
 }

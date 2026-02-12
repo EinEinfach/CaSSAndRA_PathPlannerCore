@@ -54,5 +54,8 @@ namespace Planner
 
         // Prüft ob die Linie einen Polygon schneidet
         static bool isLineIntersectingPolygon(Point p1, Point p2, const Polygon& poly);
+
+        // Berechne Distanz zwischen zwei Punkten
+        static double calculateDistance(Point a, Point b);
     };
 };

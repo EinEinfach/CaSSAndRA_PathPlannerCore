@@ -14,8 +14,9 @@ using Planner::Visualizer;
 int main() {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
-    double offset = 0.2;
-    double angle = 0;
+    Point startPos = {3.0, 7.0};
+    double offset = 0.3;
+    double angle = 0.0;
 
     Polygon perimeter = {{0.0, 0.0}, {20.0, 0.0}, {20.0, 30.0}, {15.0, 30.0}, {15.0, 25.0}, {10.0, 25.0}, {10.0, 20.0},  {0.0, 10.0}};
 
@@ -39,7 +40,7 @@ int main() {
     std::cout << "Generiere Slice..." << std::endl;
     auto slices = PathPlanner::generateSlices(myEnv, offset);
     std::cout << "Verbnde Slice..." << std::endl;
-    auto fullPath = PathPlanner::connectSlices(myEnv, slices);
+    auto fullPath = PathPlanner::connectSlices(myEnv, slices, startPos);
     std::cout << "Drehe die Environment zurück..." << std::endl;
     myEnv.rotate(-angle);
     fullPath.rotate(-angle);
