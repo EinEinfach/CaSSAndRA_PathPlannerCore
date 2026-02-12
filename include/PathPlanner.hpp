@@ -22,5 +22,7 @@ namespace Planner
         static BestNextSegment findBestNext(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited, const Environment &env);
         static BestNextSegment findBestNextFallback(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited);
         static void addSliceToPath(LineString &path, const LineString &slice, bool reverse);
+        static std::vector<Point> getNavigationNodes(const Environment& env);
+        static std::vector<Point> findAStarPath(Point start, Point goal, const Environment& env);
     };
 }

@@ -112,17 +112,34 @@ namespace Planner
             // 1. Finde das nächste erreichbare Segment ausgehend von currentPos (anfangs startPos)
             BestNextSegment next = findBestNext(currentPos, slices, visited, env);
 
-            // 2. Fallback, falls der Weg blockiert ist
-            if (next.index == -1)
+            // 2.1 Weg ohne Umweege möglich
+            if (next.index != -1)
+            {
+                // 3.1 Segment hinzufügen
+                visited[next.index] = true;
+                addSliceToPath(fullPath, slices[next.index], next.reverse);
+            }
+            // 2.2 Weg braucht A*
+            else
             {
                 next = findBestNextFallback(currentPos, slices, visited);
+                if (next.index != -1)
+                {
+                    Point goal = next.reverse ? slices[next.index].getPoints().back() : slices[next.index].getPoints().front();
+
+                    // Berechne Umweg um Hindernisse
+                    std::vector<Point> bypass = findAStarPath(currentPos, goal, env);
+
+                    // Füge alle Punkte des Umwegs hinzu (außer dem ersten, das ist currentPos)
+                    for (size_t i = 1; i < bypass.size(); ++i)
+                    {
+                        fullPath.addPoint(bypass[i]);
+                    }
+                    // 3.2 Segment hinzufügen
+                    visited[next.index] = true;
+                    addSliceToPath(fullPath, slices[next.index], next.reverse);
+                }
             }
-
-            // 3. Segment hinzufügen
-            visited[next.index] = true;
-            addSliceToPath(fullPath, slices[next.index], next.reverse);
-
-            // 4. Update der Position für den nächsten Durchlauf
             currentPos = fullPath.getPoints().back();
         }
 
@@ -131,16 +148,25 @@ namespace Planner
 
     bool PathPlanner::isPathClear(Point a, Point b, const Environment &env)
     {
+        // Ein winziges Stückchen von den Endpunkten weggehen,
+        // um numerische Probleme an Ecken zu vermeiden
+        double epsilon = 0.001;
+        Point dir = {b.x - a.x, b.y - a.y};
+        double len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+
+        if (len < epsilon)
+            return true;
+
+        // "Eingekürzte" Testpunkte
+        Point testA = {a.x + (dir.x / len) * epsilon, a.y + (dir.y / len) * epsilon};
+        Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
+
         for (const auto &obs : env.getObstacles())
         {
-            if (GeometryUtils::isLineIntersectingPolygon(a, b, obs))
+            if (GeometryUtils::isLineIntersectingPolygon(testA, testB, obs))
             {
                 return false;
             }
-        }
-        if (GeometryUtils::isLineIntersectingPolygon(a, b, env.getPerimeter()))
-        {
-            return false;
         }
         return true;
     }
@@ -211,4 +237,100 @@ namespace Planner
         }
         return best;
     }
+
+    std::vector<Point> PathPlanner::getNavigationNodes(const Environment &env)
+    {
+        std::vector<Point> nodes;
+        // Ecken der Hindernisse hinzufügen
+        for (const auto &obs : env.getObstacles())
+        {
+            for (const auto &p : obs.getPoints())
+            {
+                nodes.push_back(p);
+            }
+        }
+        // Hier kommen innenliegende Perimeter Ecken
+        return nodes;
+    }
+
+    struct Node
+    {
+        Point pos;
+        double gCost; // Weg vom Start bis hierher
+        double hCost; // Schätzung bis zum Ziel (Luftlinie)
+        int parentIdx = -1;
+
+        double fCost() const { return gCost + hCost; }
+    };
+
+    std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env)
+    {
+        std::vector<Point> navPoints = getNavigationNodes(env);
+        navPoints.push_back(goal); // Das Ziel ist auch ein erreichbarer Knoten
+
+        std::vector<Node> openList;
+        std::vector<Node> closedList;
+
+        // Startknoten
+        openList.push_back({start, 0.0, GeometryUtils::calculateDistance(start, goal), -1});
+
+        while (!openList.empty())
+        {
+            // 1. Knoten mit niedrigstem fCost finden
+            size_t bestIdx = 0;
+            for (size_t i = 1; i < openList.size(); ++i)
+            {
+                if (openList[i].fCost() < openList[bestIdx].fCost())
+                    bestIdx = i;
+            }
+
+            Node current = openList[bestIdx];
+
+            // Ziel erreicht? (Sehr nah am Zielpunkt)
+            if (GeometryUtils::calculateDistance(current.pos, goal) < 0.001)
+            {
+                // Pfad rekonstruieren
+                std::vector<Point> path;
+                path.push_back(current.pos);
+                while (current.parentIdx != -1)
+                {
+                    current = closedList[current.parentIdx];
+                    path.push_back(current.pos);
+                }
+                std::reverse(path.begin(), path.end());
+                return path;
+            }
+
+            openList.erase(openList.begin() + bestIdx);
+            int currentInClosedIdx = closedList.size();
+            closedList.push_back(current);
+
+            // 2. Nachbarn prüfen (Alle sichtbaren navPoints)
+            for (const auto &nextPos : navPoints)
+            {
+                if (isPathClear(current.pos, nextPos, env))
+                {
+                    double newGCost = current.gCost + GeometryUtils::calculateDistance(current.pos, nextPos);
+
+                    // Prüfen, ob wir diesen Punkt schon besser erreicht haben
+                    bool skip = false;
+                    for (const auto &cNode : closedList)
+                    {
+                        if (cNode.pos == nextPos && cNode.gCost <= newGCost)
+                        {
+                            skip = true;
+                            break;
+                        }
+                    }
+                    if (skip)
+                        continue;
+
+                    openList.push_back({nextPos, newGCost, GeometryUtils::calculateDistance(nextPos, goal), currentInClosedIdx});
+                }
+            }
+        }
+
+        return {}; // Kein Pfad gefunden
+    }
+
 }
