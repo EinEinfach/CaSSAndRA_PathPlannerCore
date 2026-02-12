@@ -1,16 +1,29 @@
 {
+    "version": "2.0.0",
     "tasks": [
         {
+            "label": "Build Project",
+            "type": "shell",
+            "command": "make all",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "type": "cppbuild",
-            "label": "C/C++: g++ Aktive Datei kompilieren",
-            "command": "/usr/bin/g++",
+            "label": "C/C++: clang Aktive Datei kompilieren",
+            "command": "/usr/bin/clang",
             "args": [
-                "-fdiagnostics-color=always",
+                "-fcolor-diagnostics",
+                "-fansi-escape-codes",
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
-                "-std=c++20",
+                "${fileDirname}/${fileBasenameNoExtension}"
             ],
             "options": {
                 "cwd": "${fileDirname}"
@@ -22,8 +35,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Vom Debugger generierte Aufgabe.",
+            "detail": "Vom Debugger generierte Aufgabe."
         }
-    ],
-    "version": "2.0.0"
+    ]
 }

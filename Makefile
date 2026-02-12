@@ -1,7 +1,8 @@
 # Compiler Einstellungen
 CXX = clang++
 # Wir bleiben bei C++20, da Apple Clang C++23 noch nicht voll unterstützt
-CXXFLAGS = -std=c++20 -Wall -Wextra -Iinclude -MMD -MP
+# Füge -g unbedingt hinzu!
+CXXFLAGS = -std=c++20 -g3 -O0 -Wall -Wextra -Iinclude -MMD -MP
 
 # Pfade
 SRC_DIR = src
