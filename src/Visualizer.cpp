@@ -99,7 +99,7 @@ namespace Planner
             {
                 file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
                      << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
-                     << "\" stroke=\"orange\" stroke-width=\"2\" stroke-dasharray=\"5,5\" />\n";
+                     << "\" stroke=\"red\" stroke-width=\"2.5\" stroke-dasharray=\"5,5\" />\n";
             }
         }
 
@@ -121,7 +121,7 @@ namespace Planner
             file << "<polyline points=\"";
             for (const auto &p : path.getPoints())
                 file << transformX(p.x) << "," << transformY(p.y) << " ";
-            file << "\" fill=\"none\" stroke=\"blue\" stroke-width=\"1.0\" />\n";
+            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"1.0\" />\n";
         }
 
         file << "</svg>";

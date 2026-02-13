@@ -15,8 +15,8 @@ int main() {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
     Point startPos = {0.0, 0.0};
-    double offset = 0.5;
-    double angle = 0.7;
+    double offset = 2.0;
+    double angle = 0.0;
 
     Polygon perimeter = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0},  {0.0, 10.0}};
 

@@ -197,40 +197,6 @@ namespace Planner
                                                            const std::vector<bool> &visited,
                                                            const Environment &env)
     {
-        // BestNextSegment best;
-        // best.distance = 1e10;
-
-        // for (size_t i = 0; i < slices.size(); ++i)
-        // {
-        //     if (visited[i])
-        //         continue;
-
-        //     const auto &pts = slices[i].getPoints();
-        //     Point start = pts.front();
-        //     Point end = pts.back();
-
-        //     double dS = GeometryUtils::calculateDistance(currentPos, start);
-        //     double dE = GeometryUtils::calculateDistance(currentPos, end);
-
-        //     // DEBUG: Wir schauen uns Slice #2 ganz genau an, wenn wir in der Nähe sind
-        //     if (i == 2)
-        //     {
-        //         bool clearS = isPathClear(currentPos, start, env);
-        //         bool clearE = isPathClear(currentPos, end, env);
-        //         std::cout << "DEBUG SLICE #2: DistStart: " << dS << " (Clear: " << clearS
-        //                   << "), DistEnd: " << dE << " (Clear: " << clearE << ")" << std::endl;
-        //     }
-
-        //     if (dS < best.distance && isPathClear(currentPos, start, env))
-        //     {
-        //         best = {(int)i, false, dS};
-        //     }
-        //     if (dE < best.distance && isPathClear(currentPos, end, env))
-        //     {
-        //         best = {(int)i, true, dE};
-        //     }
-        // }
-        // return best;
         BestNextSegment best;
         best.distance = 1e10; // WICHTIG: Mit sehr hohem Wert starten!
 
