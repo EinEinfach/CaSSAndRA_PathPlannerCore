@@ -39,42 +39,58 @@ namespace Planner
         double s2_x = d.x - c.x;
         double s2_y = d.y - c.y;
 
-        double s, t;
         double denom = (-s2_x * s1_y + s1_x * s2_y);
 
-        // Wenn der Nenner 0 ist, dann sind die Linien parallel
         if (std::abs(denom) < 1e-10)
             return false;
 
-        s = (-s1_y * (a.x - c.x) + s1_x * (a.y - c.y)) / denom;
-        t = (s2_x * (a.y - c.y) - s2_y * (a.x - c.x)) / denom;
+        // s und t berechnen
+        double s = (-s1_y * (a.x - c.x) + s1_x * (a.y - c.y)) / denom;
+        double t = (s2_x * (a.y - c.y) - s2_y * (a.x - c.x)) / denom;
 
-        if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+        // EPSILON für "Nicht-Berühren"
+        // Wir nutzen einen winzigen Schwellenwert, um die Endpunkte zu ignorieren.
+        double eps = 1e-9;
+
+        if (s > eps && s < (1.0 - eps) && t > eps && t < (1.0 - eps))
         {
-            // Schnittpunkt gefunden
             out.x = a.x + (t * s1_x);
             out.y = a.y + (t * s1_y);
             return true;
         }
+
         return false;
     }
 
     bool GeometryUtils::isPointInPolygon(Point p, const Polygon &poly)
     {
         const auto &pts = poly.getPoints();
-        bool inside = false;
         size_t numPoints = pts.size();
+        if (numPoints < 3)
+            return false;
 
+        bool inside = false;
         for (size_t i = 0; i < numPoints; i++)
         {
-            // j ist immer der Index vor i
-            // Wenn i=0 ist, ist j der letzte Punkt (Modulo-Trick)
             size_t j = (i == 0) ? numPoints - 1 : i - 1;
-
             const Point &A = pts[i];
             const Point &B = pts[j];
 
-            // Raycasting Check
+            // --- CHECK: Liegt der Punkt exakt auf der Kante oder einem Eckpunkt? ---
+            // Wir prüfen, ob der Punkt p auf dem Segment AB liegt.
+            // 1. Er muss kollinear sein (Fläche des Dreiecks ABP fast 0)
+            // 2. Er muss innerhalb der Bounds von A und B liegen
+            double crossProduct = (p.y - A.y) * (B.x - A.x) - (p.x - A.x) * (B.y - A.y);
+            if (std::abs(crossProduct) < 1e-9)
+            { // Kollinear
+                if (p.x >= std::min(A.x, B.x) - 1e-9 && p.x <= std::max(A.x, B.x) + 1e-9 &&
+                    p.y >= std::min(A.y, B.y) - 1e-9 && p.y <= std::max(A.y, B.y) + 1e-9)
+                {
+                    return true; // Punkt liegt auf Kante oder Ecke
+                }
+            }
+
+            // --- Standard Raycasting (für Punkte, die nicht auf der Kante liegen) ---
             if (((A.y > p.y) != (B.y > p.y)) &&
                 (p.x < (B.x - A.x) * (p.y - A.y) / (B.y - A.y) + A.x))
             {
@@ -164,26 +180,6 @@ namespace Planner
         }
 
         return false;
-        // const auto &pts = poly.getPoints();
-        // if (pts.size() < 3)
-        //     return false;
-        // // 1. Check auf echte Schnittpunkte
-        // for (size_t i = 0; i < pts.size(); ++i)
-        // {
-        //     Point intersect;
-        //     // Prüfe Segment p1-p2 gegen jede Kante des Hindernisses
-        //     if (getIntersection(p1, p2, pts[i], pts[(i + 1) % pts.size()], intersect))
-        //     {
-        //         // Ein Schnittpunkt wurde gefunden -> Weg ist blockiert!
-        //         return true;
-        //     }
-        // }
-        // // 2. Check liegt die gesamte Linie im Hindernis
-        // Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
-        // if (isPointInPolygon(midPoint, poly)) {
-        //     return true;
-        // }
-        // return false;
     }
 
     double GeometryUtils::calculateDistance(Point a, Point b)
