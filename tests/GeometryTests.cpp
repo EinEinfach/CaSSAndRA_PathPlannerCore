@@ -3,7 +3,7 @@
 
 using namespace Planner;
 
-// ******************GeometryUtils::getIntersection*******************
+// ******************GeometryUtils::getIntersectionPoint****************
 
 // 1. Test: Ein klassischer Kreuz-Schnitt
 TEST(GeometryUtilsTest, GetIntersection_Cross)
@@ -12,7 +12,7 @@ TEST(GeometryUtilsTest, GetIntersection_Cross)
     Point c{0, 10}, d{10, 0};
     Point out;
 
-    bool result = GeometryUtils::getIntersection(a, b, c, d, out);
+    bool result = GeometryUtils::getIntersectionPoint(a, b, c, d, out);
 
     EXPECT_TRUE(result);
     EXPECT_NEAR(out.x, 5.0, 1e-7);
@@ -26,7 +26,7 @@ TEST(GeometryUtilsTest, GetIntersection_Parallel)
     Point c{0, 1}, d{10, 1};
     Point out;
 
-    bool result = GeometryUtils::getIntersection(a, b, c, d, out);
+    bool result = GeometryUtils::getIntersectionPoint(a, b, c, d, out);
 
     EXPECT_FALSE(result);
 }
@@ -39,7 +39,7 @@ TEST(GeometryUtilsTest, GetIntersection_EndpointTouch)
     Point out;
 
     // Wir erwarten FALSE, weil Berührung kein "Durchschuss" ist
-    bool result = GeometryUtils::getIntersection(a, b, c, d, out);
+    bool result = GeometryUtils::getIntersectionPoint(a, b, c, d, out);
     EXPECT_FALSE(result);
 }
 
@@ -53,7 +53,7 @@ TEST(GeometryUtilsTest, GetIntersection_CollinearOverlapping)
     // Kollineare Linien haben unendlich viele Schnittpunkte oder liegen aufeinander.
     // Mathematisch ist der Nenner (denom) hier 0.
     // Da kein eindeutiger "Durchschuss" existiert, sollte dies FALSE liefern.
-    EXPECT_FALSE(GeometryUtils::getIntersection(a, b, c, d, out));
+    EXPECT_FALSE(GeometryUtils::getIntersectionPoint(a, b, c, d, out));
 }
 
 // 5. Test: Linien auf der gleichen Geraden, aber getrennt (Kollinear - Getrennt)
@@ -63,7 +63,58 @@ TEST(GeometryUtilsTest, GetIntersection_CollinearSeparate)
     Point c{10, 0}, d{15, 0};
     Point out;
 
-    EXPECT_FALSE(GeometryUtils::getIntersection(a, b, c, d, out));
+    EXPECT_FALSE(GeometryUtils::getIntersectionPoint(a, b, c, d, out));
+}
+
+// ******************GeometryUtils::getIntersectionLine****************
+
+// Test 1: Überlapung zum Teil
+TEST(GeometryUtilsTest, GetIntersectionLine_Overlap) {
+    Point a{0, 0}, b{10, 0};
+    Point c{5, 0}, d{15, 0}; // Überlappt von 5 bis 10
+    LineString out;
+
+    bool result = GeometryUtils::getIntersectionLine(a, b, c, d, out);
+
+    ASSERT_TRUE(result);
+    auto pts = out.getPoints();
+    ASSERT_EQ(pts.size(), 2UL);
+    
+    // Wir erwarten das Segment von (5,0) bis (10,0)
+    EXPECT_NEAR(pts[0].x, 5.0, 1e-7);
+    EXPECT_NEAR(pts[1].x, 10.0, 1e-7);
+    EXPECT_NEAR(pts[0].y, 0.0, 1e-7);
+    EXPECT_NEAR(pts[1].y, 0.0, 1e-7);
+}
+
+// Test 2: Überlapung gleich
+TEST(GeometryUtilsTest, GetIntersectionLine_OverlapEqual) {
+    Point a{-5, -5}, b{10, 10};
+    Point c{-5, -5}, d{10, 10}; // Überlappt gleich
+    LineString out;
+
+    bool result = GeometryUtils::getIntersectionLine(a, b, c, d, out);
+
+    ASSERT_TRUE(result);
+    auto pts = out.getPoints();
+    ASSERT_EQ(pts.size(), 2UL);
+    
+    // Wir erwarten das Segment von (5,0) bis (10,0)
+    EXPECT_NEAR(pts[0].x, -5.0, 1e-7);
+    EXPECT_NEAR(pts[1].x, 10.0, 1e-7);
+    EXPECT_NEAR(pts[0].y, -5.0, 1e-7);
+    EXPECT_NEAR(pts[1].x, 10.0, 1e-7);
+}
+
+// Test 3: Keine Überlapung 
+TEST(GeometryUtilsTest, GetIntersectionLine_NoOverlap) {
+    Point a{-5, -5}, b{10, 10};
+    Point c{-6, -7}, d{10, 10}; 
+    LineString out;
+
+    bool result = GeometryUtils::getIntersectionLine(a, b, c, d, out);
+
+    EXPECT_FALSE(result);
 }
 
 // ******************GeometryUtils::isPointInPolygon*******************
@@ -72,10 +123,10 @@ TEST(GeometryUtilsTest, GetIntersection_CollinearSeparate)
 Polygon createSquare()
 {
     Polygon poly;
-    poly.addPoint({0, 0});
-    poly.addPoint({10, 0});
+    poly.addPoint({-10, -10});
+    poly.addPoint({-10, 10});
     poly.addPoint({10, 10});
-    poly.addPoint({0, 10});
+    poly.addPoint({10, -10});
     return poly;
 }
 
@@ -84,6 +135,10 @@ TEST(GeometryUtilsTest, IsPointInPolygon_Inside)
 {
     Polygon poly = createSquare();
     EXPECT_TRUE(GeometryUtils::isPointInPolygon({5, 5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInPolygon({-5, -5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInPolygon({5, -5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInPolygon({-5, 5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInPolygon({0, 0}, poly));
 }
 
 // 2. Punkt klar außerhalb
@@ -91,6 +146,9 @@ TEST(GeometryUtilsTest, IsPointInPolygon_Outside)
 {
     Polygon poly = createSquare();
     EXPECT_FALSE(GeometryUtils::isPointInPolygon({15, 5}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointInPolygon({-15, 5}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointInPolygon({5, 15}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointInPolygon({5, -15}, poly));
 }
 
 // 3. Punkt exakt auf der Kante (Anforderung: true)
@@ -130,14 +188,14 @@ TEST(GeometryUtilsTest, IsPointInPolygon_Concave)
 // 6. Test: kompletter durchschuss
 TEST(GeometryUtilsTest, IsLineIntersectingPolygon_ThroughPass)
 {
-    Polygon obstacle = createSquare(); // 0,0 bis 10,10
+    Polygon obstacle = createSquare(); 
 
-    // Linie geht von links (-5, 5) nach rechts (15, 5) mitten durch
-    Point p1{-5, 5}, p2{15, 5};
+    // Linie geht von links (-15, 5) nach rechts (15, 5) mitten durch
+    Point p1{-15, 5}, p2{15, 5};
     EXPECT_TRUE(GeometryUtils::isLineIntersectingPolygon(p1, p2, obstacle));
 
     // Linie liegt komplett AUSSERHALB
-    Point p3{-5, -5}, p4{15, -5};
+    Point p3{-5, -20}, p4{15, -25};
     EXPECT_FALSE(GeometryUtils::isLineIntersectingPolygon(p3, p4, obstacle));
 }
 
@@ -216,7 +274,7 @@ TEST(GeometryUtilsTest, RotatePoint_00)
 }
 
 // 5. Test: Rotiere einen Linestring
-TEST(LineStringTest, RotateLineString) {
+TEST(GeometryUtilsTest, RotateLineString) {
     LineString ls;
     ls.addPoint({1, 0});
     ls.addPoint({0, 1});
@@ -225,7 +283,7 @@ TEST(LineStringTest, RotateLineString) {
     ls.rotate(M_PI / 2.0);
     
     auto pts = ls.getPoints();
-    ASSERT_EQ(pts.size(), 2);
+    ASSERT_EQ(pts.size(), 2UL);
     
     // (1,0) wird zu (0,1)
     EXPECT_NEAR(pts[0].x, 0.0, 1e-7);

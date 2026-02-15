@@ -32,7 +32,7 @@ namespace Planner
         return points.size() >= 3;
     }
 
-    bool GeometryUtils::getIntersection(Point a, Point b, Point c, Point d, Point &out)
+    bool GeometryUtils::getIntersectionPoint(Point a, Point b, Point c, Point d, Point &out)
     {
         double s1_x = b.x - a.x;
         double s1_y = b.y - a.y;
@@ -57,6 +57,92 @@ namespace Planner
             out.x = a.x + (t * s1_x);
             out.y = a.y + (t * s1_y);
             return true;
+        }
+
+        return false;
+    }
+
+    bool GeometryUtils::getIntersectionLine(Point a, Point b, Point c, Point d, LineString &outLine)
+    {
+        // 1. Richtungsvektoren
+        double dx1 = b.x - a.x;
+        double dy1 = b.y - a.y;
+        double dx2 = d.x - c.x;
+        double dy2 = d.y - c.y;
+
+        // 2. STRENGER CHECK: Parallelität
+        // Wenn das Kreuzprodukt nicht 0 ist, schneiden sie sich (crossing)
+        // oder sind windschief, aber sie liegen nicht aufeinander.
+        double denom = dx1 * dy2 - dy1 * dx2;
+        if (std::abs(denom) > 1e-9)
+        {
+            return false; // Kreuzende Linien -> laut Anforderung false
+        }
+
+        // 3. CHECK: Liegen sie auf der exakt gleichen Geraden?
+        // Kreuzprodukt zwischen Vektor (a->b) und (a->c) muss 0 sein
+        double distCheck = dx1 * (c.y - a.y) - dy1 * (c.x - a.x);
+        if (std::abs(distCheck) > 1e-9)
+        {
+            return false; // Parallel, aber versetzt (kein Kontakt)
+        }
+
+        // 4. Projektion auf die Achse der ersten Linie (Skalarprodukt)
+        auto project = [](Point p, Point start, double dx, double dy)
+        {
+            return (p.x - start.x) * dx + (p.y - start.y) * dy;
+        };
+
+        double tA = project(a, a, dx1, dy1);
+        double tB = project(b, a, dx1, dy1);
+        double tC = project(c, a, dx1, dy1);
+        double tD = project(d, a, dx1, dy1);
+
+        double start1 = std::min(tA, tB);
+        double end1 = std::max(tA, tB);
+        double start2 = std::min(tC, tD);
+        double end2 = std::max(tC, tD);
+
+        // Schnittmenge der 1D-Intervalle
+        double overlapStart = std::max(start1, start2);
+        double overlapEnd = std::min(end1, end2);
+
+        // 5. Nur wenn die Überlappung eine echte Länge hat
+        // (eps verhindert, dass eine bloße Punkt-Berührung als Linie zählt)
+        double eps = 1e-7;
+        if (overlapStart < overlapEnd - eps)
+        {
+            // Wir sammeln alle Punkte, die im Überlappungsbereich liegen
+            std::vector<Point> allPoints = {a, b, c, d};
+            std::vector<Point> resultPoints;
+
+            for (const auto &p : allPoints)
+            {
+                double t = project(p, a, dx1, dy1);
+                if (t >= overlapStart - eps && t <= overlapEnd + eps)
+                {
+                    // Duplikate vermeiden
+                    bool exists = false;
+                    for (const auto &rp : resultPoints)
+                    {
+                        if (std::abs(rp.x - p.x) < eps && std::abs(rp.y - p.y) < eps)
+                            exists = true;
+                    }
+                    if (!exists)
+                        resultPoints.push_back(p);
+                }
+            }
+
+            if (resultPoints.size() >= 2)
+            {
+                // Sortieren für konsistenten LineString (z.B. von links nach rechts)
+                std::sort(resultPoints.begin(), resultPoints.end(), [](Point p1, Point p2)
+                          { return p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y); });
+
+                outLine.addPoint(resultPoints.front());
+                outLine.addPoint(resultPoints.back());
+                return true;
+            }
         }
 
         return false;
@@ -128,7 +214,7 @@ namespace Planner
         {
             Point intersect;
             // Prüfe das Liniensegment p1-p2 gegen die Polygon-Kante (pts[i] bis pts[next])
-            if (getIntersection(p1, p2, pts[i], pts[(i + 1) % numPoints], intersect))
+            if (getIntersectionPoint(p1, p2, pts[i], pts[(i + 1) % numPoints], intersect))
             {
                 // Ein Schnittpunkt blockiert nur, wenn er NICHT fast identisch
                 // mit den Endpunkten p1 oder p2 ist (Endpunkt-Toleranz 1mm)
