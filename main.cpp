@@ -18,16 +18,20 @@ int main() {
     double offset = 2.0;
     double angle = 0.0;
 
-    Polygon perimeter = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0},  {0.0, 10.0}};
-
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
-    auto myEnv = Environment{perimeter};
-
+    Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0},  {0.0, 10.0}};
+    auto myEnv1 = Environment{perimeter1};
     Polygon obstacle1 = {{5.0, 2.0}, {7.0, 2.0}, {7.0, 4.0}, {5.0, 4.5}};
     Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
+    myEnv1.addObstacle(obstacle1);
+    myEnv1.addObstacle(obstacle2);
 
-    myEnv.addObstacle(obstacle1);
-    myEnv.addObstacle(obstacle2);
+    Polygon perimeter2 = {{-5.0, -5.0}, {-5.0, -3.0}, {-3.0, -3.0}, {-3.0, 3.0}, {-5.0, 3.0}, {-5.0, 5.0}, {5.0, 5.0}, {5.0, -5.0}};
+    auto myEnv2 = Environment(perimeter2);
+    Polygon obstacle3 = {{2.0, 2.0}, {4.0, 2.0}, {4.0, 4.0}, {2.0, 4.0}};
+    myEnv2.addObstacle(obstacle3);
+
+    auto myEnv = myEnv2;
 
     LineString vWire = {{0.0, 9.5}, {20.0, 9.5}};
     myEnv.setVirtualWire(vWire);

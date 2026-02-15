@@ -32,10 +32,20 @@ namespace Planner
             for (size_t i = 0; i < perimeterPoints.size(); ++i)
             {
                 Point intersect;
-                if (GeometryUtils::getIntersection(perimeterPoints[i],
-                                                   perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
+                if (GeometryUtils::getIntersectionPoint(perimeterPoints[i],
+                                                        perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
                 {
                     x_intersections.push_back(intersect.x);
+                }
+                // prüfe ob es bereich gibt wo die Linie auf dem Perimeter liegt, wenn ja, füge diese Linie hnzu
+                LineString intersectLine;
+                if (GeometryUtils::getIntersectionLine(perimeterPoints[i], perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersectLine))
+                {
+                    const auto &pts = intersectLine.getPoints();
+                    for (const auto &p : pts)
+                    {
+                        x_intersections.push_back(p.x);
+                    }
                 }
             }
 
@@ -46,10 +56,20 @@ namespace Planner
                 for (size_t i = 0; i < obsPts.size(); ++i)
                 {
                     Point intersect;
-                    if (GeometryUtils::getIntersection(obsPts[i],
-                                                       obsPts[(i + 1) % obsPts.size()], c, d, intersect))
+                    if (GeometryUtils::getIntersectionPoint(obsPts[i],
+                                                            obsPts[(i + 1) % obsPts.size()], c, d, intersect))
                     {
                         x_intersections.push_back(intersect.x);
+                    }
+                    // prüfe ob es bereich gibt wo die Linie auf dem Obstacle liegt, wenn ja, füge diese Linie hnzu
+                    LineString intersectLine;
+                    if (GeometryUtils::getIntersectionLine(obsPts[i], obsPts[(i + 1) % obsPts.size()], c, d, intersectLine))
+                    {
+                        const auto &pts = intersectLine.getPoints();
+                        for (const auto &p : pts)
+                        {
+                            x_intersections.push_back(p.x);
+                        }
                     }
                 }
             }
@@ -164,12 +184,21 @@ namespace Planner
         if (len < epsilon)
             return true;
 
-        Point testA = {a.x + (dir.x / len) * epsilon, a.y + (dir.y / len) * epsilon};
-        Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
+        // Point testA = {a.x + (dir.x / len) * epsilon, a.y + (dir.y / len) * epsilon};
+        // Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
 
+        // Prüfe ob innerhalb des Perimeters
+        // auto& perimeter = env.getPerimeter();
+        // if (GeometryUtils::isLineIntersectingPolygon(testA, testB, perimeter)){
+        //     return false;
+        // }
+        // if(!GeometryUtils::isPointInPolygon(testA, perimeter) || GeometryUtils::isPointInPolygon(testB, perimeter)) {
+        //     return false;
+        // }
+        // Prüfe ob außerhalb der Hindernisse
         for (const auto &obs : env.getObstacles())
         {
-            if (GeometryUtils::isLineIntersectingPolygon(testA, testB, obs))
+            if (GeometryUtils::isLineIntersectingPolygon(a, b, obs))
             {
                 return false;
             }
