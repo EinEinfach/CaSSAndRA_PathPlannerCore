@@ -45,11 +45,24 @@ clean:
 
 .PHONY: all clean
 
-# Pfade für Homebrew GoogleTest (auf Apple Silicon)
+# --- Test Konfiguration ---
+TEST_DIR = tests
 GTEST_FLAGS = -L/opt/homebrew/lib -lgtest -lgtest_main -lpthread
 GTEST_INC = -I/opt/homebrew/include
 
-# Ein separates Target für die Tests
+# Alle Testdateien finden
+TEST_SRCS = $(wildcard $(TEST_DIR)/*.cpp)
+
+# Target für die Tests
 test: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
-	$(CXX) $(CXXFLAGS) $(GTEST_INC) tests/GeometryTests.cpp $(filter-out $(BUILD_DIR)/main.o, $(OBJS)) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
+	$(CXX) $(CXXFLAGS) $(GTEST_INC) $(TEST_SRCS) $(filter-out $(BUILD_DIR)/main.o, $(OBJS)) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
 	./$(BUILD_DIR)/run_tests
+
+# # Pfade für Homebrew GoogleTest (auf Apple Silicon)
+# GTEST_FLAGS = -L/opt/homebrew/lib -lgtest -lgtest_main -lpthread
+# GTEST_INC = -I/opt/homebrew/include
+
+# # Ein separates Target für die Tests
+# test: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
+# 	$(CXX) $(CXXFLAGS) $(GTEST_INC) tests/GeometryTests.cpp $(filter-out $(BUILD_DIR)/main.o, $(OBJS)) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
+# 	./$(BUILD_DIR)/run_tests
