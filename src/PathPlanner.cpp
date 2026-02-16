@@ -188,17 +188,22 @@ namespace Planner
         // Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
 
         // Prüfe ob innerhalb des Perimeters
-        // auto& perimeter = env.getPerimeter();
-        // if (GeometryUtils::isLineIntersectingPolygon(testA, testB, perimeter)){
-        //     return false;
-        // }
-        // if(!GeometryUtils::isPointInPolygon(testA, perimeter) || GeometryUtils::isPointInPolygon(testB, perimeter)) {
-        //     return false;
-        // }
-        // Prüfe ob außerhalb der Hindernisse
+        auto &perimeter = env.getPerimeter();
+        if (!GeometryUtils::isLineCoverdByPolygon(a, b, perimeter))
+        {
+            return false;
+        }
+
+        // Prüfe Hindernisse
         for (const auto &obs : env.getObstacles())
         {
+            // Wird Hindernis durchquert
             if (GeometryUtils::isLineIntersectingPolygon(a, b, obs))
+            {
+                return false;
+            }
+            // Liegt der Weg innerhalb des Hindernisses
+            if (GeometryUtils::isLineCoverdByPolygon(a, b, obs))
             {
                 return false;
             }
@@ -299,7 +304,11 @@ namespace Planner
                 nodes.push_back(p);
             }
         }
-        // Hier kommen innenliegende Perimeter Ecken
+        // Hier kommen Perimeter Ecken
+        for (const auto &p : env.getPerimeter().getPoints())
+        {
+            nodes.push_back(p);
+        }
         return nodes;
     }
 
@@ -316,17 +325,16 @@ namespace Planner
     std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env)
     {
         std::vector<Point> navPoints = getNavigationNodes(env);
-        navPoints.push_back(goal); // Das Ziel ist auch ein erreichbarer Knoten
+        navPoints.push_back(goal);
 
         std::vector<Node> openList;
         std::vector<Node> closedList;
 
-        // Startknoten
         openList.push_back({start, 0.0, GeometryUtils::calculateDistance(start, goal), -1});
 
         while (!openList.empty())
         {
-            // 1. Knoten mit niedrigstem fCost finden
+            // 1. Besten Knoten aus Open List wählen
             size_t bestIdx = 0;
             for (size_t i = 1; i < openList.size(); ++i)
             {
@@ -336,10 +344,9 @@ namespace Planner
 
             Node current = openList[bestIdx];
 
-            // Ziel erreicht? (Sehr nah am Zielpunkt)
+            // Ziel erreicht?
             if (GeometryUtils::calculateDistance(current.pos, goal) < 0.001)
             {
-                // Pfad rekonstruieren
                 std::vector<Point> path;
                 path.push_back(current.pos);
                 while (current.parentIdx != -1)
@@ -351,36 +358,59 @@ namespace Planner
                 return path;
             }
 
+            // Von Open nach Closed verschieben
             openList.erase(openList.begin() + bestIdx);
-            int currentInClosedIdx = closedList.size();
+            int currentInClosedIdx = static_cast<int>(closedList.size());
             closedList.push_back(current);
 
-            // 2. Nachbarn prüfen (Alle sichtbaren navPoints)
+            // 2. Nachbarn prüfen
             for (const auto &nextPos : navPoints)
             {
+                // Punkt-Identität prüfen (nicht zu sich selbst springen)
+                if (GeometryUtils::calculateDistance(current.pos, nextPos) < 0.001)
+                    continue;
+
                 if (isPathClear(current.pos, nextPos, env))
                 {
                     double newGCost = current.gCost + GeometryUtils::calculateDistance(current.pos, nextPos);
 
-                    // Prüfen, ob wir diesen Punkt schon besser erreicht haben
-                    bool skip = false;
+                    // Check Closed List: Haben wir diesen Ort schon final besucht?
+                    bool inClosed = false;
                     for (const auto &cNode : closedList)
                     {
-                        if (cNode.pos == nextPos && cNode.gCost <= newGCost)
+                        if (GeometryUtils::calculateDistance(cNode.pos, nextPos) < 0.001)
                         {
-                            skip = true;
+                            inClosed = true;
                             break;
                         }
                     }
-                    if (skip)
+                    if (inClosed)
                         continue;
 
-                    openList.push_back({nextPos, newGCost, GeometryUtils::calculateDistance(nextPos, goal), currentInClosedIdx});
+                    // Check Open List: Kennen wir diesen Ort schon und ist der neue Weg besser?
+                    bool inOpen = false;
+                    for (auto &oNode : openList)
+                    {
+                        if (GeometryUtils::calculateDistance(oNode.pos, nextPos) < 0.001)
+                        {
+                            if (newGCost < oNode.gCost)
+                            {
+                                oNode.gCost = newGCost;
+                                oNode.parentIdx = currentInClosedIdx;
+                            }
+                            inOpen = true;
+                            break;
+                        }
+                    }
+
+                    if (!inOpen)
+                    {
+                        openList.push_back({nextPos, newGCost, GeometryUtils::calculateDistance(nextPos, goal), currentInClosedIdx});
+                    }
                 }
             }
         }
-
-        return {}; // Kein Pfad gefunden
+        return {};
     }
 
 }

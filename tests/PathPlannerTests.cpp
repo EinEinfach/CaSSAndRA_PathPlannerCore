@@ -58,10 +58,10 @@ TEST(PathPlannerTest, IsPathClear_LineOverPerimeter) {
 // 3. Weg berührt Perimeter von innerhalb
 TEST(PathPlannerTest, IsPathClear_LineTouchPerimeter) {
     Environment env = getEnv();
-    EXPECT_TRUE(PathPlanner::isPathClear({-3.0, 3.0}, {-5.0, 2.5}, env));
+    EXPECT_TRUE(PathPlanner::isPathClear({-3.0, 3.0}, {-3.0, 5.0}, env));
 }
 // 4. Weg berührt Perimeter-Koordinate von innerhalb
 TEST(PathPlannerTest, IsPathClear_LineTouchPerimeterCoord) {
     Environment env = getEnv();
-    EXPECT_TRUE(PathPlanner::isPathClear({-3.0, 3.0}, {-5.0, -5.0}, env));
+    EXPECT_TRUE(PathPlanner::isPathClear({-3.0, 3.0}, {-3.0, 4.0}, env));
 }

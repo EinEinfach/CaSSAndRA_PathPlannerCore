@@ -209,7 +209,7 @@ namespace Planner
         if (numPoints < 3)
             return false;
 
-        // --- TEIL 1: ECHTE SCHNITTPUNKTE PRÜFEN ---
+        // --- ECHTE SCHNITTPUNKTE PRÜFEN ---
         for (size_t i = 0; i < numPoints; ++i)
         {
             Point intersect;
@@ -227,45 +227,69 @@ namespace Planner
                 }
             }
         }
+        return false;
+    }
 
-        // --- TEIL 2: VOLLSTÄNDIGE LAGE IM HINDERNIS PRÜFEN ---
-        // Wir prüfen den Mittelpunkt, um Linien zu finden, die komplett "drinnen" liegen.
-        Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
+    bool GeometryUtils::isLineCoverdByPolygon(Point p1, Point p2, const Polygon &poly)
+    {
+        const auto &pts = poly.getPoints();
+        size_t numPoints = pts.size();
+        if (numPoints < 3)
+            return false;
 
-        if (isPointInPolygon(midPoint, poly))
+        // 1. Endpunkte prüfen
+        // Da isPointInPolygon bei uns "true" für Kanten/Ecken liefert,
+        // ist Bedingung 3 (Berühren erlaubt) hier bereits abgedeckt.
+        if (!isPointInPolygon(p1, poly) || !isPointInPolygon(p2, poly))
         {
-            // Falls isPointInPolygon "true" sagt, prüfen wir, ob wir nur auf der Kante liegen.
-            // Wir berechnen den minimalen Abstand des midPoints zu allen Kanten des Polygons.
-            double minDistanceToEdge = 1e18; // Startwert unendlich
+            return false;
+        }
 
-            for (size_t i = 0; i < numPoints; ++i)
-            {
-                Point A = pts[i];
-                Point B = pts[(i + 1) % numPoints];
+        // 2. Mittelpunkt-Check (Grobauswahl)
+        Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
+        if (!isPointInPolygon(midPoint, poly))
+        {
+            return false; // Liegt bei konkaven Polygonen "im Freien"
+        }
 
-                // Abstand Punkt zu Segment (A-B)
-                double l2 = std::pow(B.x - A.x, 2) + std::pow(B.y - A.y, 2);
-                double t = ((midPoint.x - A.x) * (B.x - A.x) + (midPoint.y - A.y) * (B.y - A.y)) / l2;
-                t = std::max(0.0, std::min(1.0, t));
-
-                Point projection = {A.x + t * (B.x - A.x), A.y + t * (B.y - A.y)};
-                double dist = std::sqrt(std::pow(midPoint.x - projection.x, 2) + std::pow(midPoint.y - projection.y, 2));
-
-                if (dist < minDistanceToEdge)
-                    minDistanceToEdge = dist;
-            }
-
-            // Wenn der midPoint näher als 1mm an einer Kante liegt, werten wir das
-            // als "auf der Kante gleitend" und NICHT als blockiert.
-            if (minDistanceToEdge < 0.001)
+        // 3. Echte Schnitte nach außen verhindern
+        // Ein "Durchschuss" durch eine Kante würde bedeuten, die Linie verlässt das Polygon.
+        for (size_t i = 0; i < numPoints; ++i)
+        {
+            Point intersect;
+            if (getIntersectionPoint(p1, p2, pts[i], pts[(i + 1) % numPoints], intersect))
             {
                 return false;
             }
-
-            return true; // Der Punkt ist wirklich signifikant tief im Hindernis
         }
 
-        return false;
+        // 4. Spezialfall: Liegt die Linie exakt auf einer Kante? (Bedingung 2)
+        // Wir prüfen, ob unsere Linie p1-p2 eine der Polygonkanten überlappt.
+        bool isOnEdge = false;
+        for (size_t i = 0; i < numPoints; ++i)
+        {
+            LineString overlap;
+            if (getIntersectionLine(p1, p2, pts[i], pts[(i + 1) % numPoints], overlap))
+            {
+                // Wenn die Überlappung exakt so lang ist wie unsere Linie p1-p2,
+                // dann liegt sie vollständig auf der Kante.
+                double dOrig = calculateDistance(p1, p2);
+                const auto &oPts = overlap.getPoints();
+                double dOverlap = calculateDistance(oPts.front(), oPts.back());
+
+                if (std::abs(dOrig - dOverlap) < 1e-7)
+                {
+                    isOnEdge = true;
+                    break;
+                }
+            }
+        }
+
+        // Ergebnis:
+        // Wenn wir hier ankommen, wissen wir: Endpunkte sind drin, kein Schnitt nach außen.
+        // Das bedeutet: Die Linie ist entweder komplett IM Polygon oder auf der Kante.
+        // Beides soll laut deiner Anforderung TRUE liefern.
+        return true;
     }
 
     double GeometryUtils::calculateDistance(Point a, Point b)

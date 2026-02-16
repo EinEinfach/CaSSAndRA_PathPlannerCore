@@ -15,7 +15,7 @@ int main() {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
     Point startPos = {0.0, 0.0};
-    double offset = 2.0;
+    double offset = 1.0;
     double angle = 0.0;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;

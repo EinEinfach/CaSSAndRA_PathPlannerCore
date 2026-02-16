@@ -209,6 +209,53 @@ TEST(GeometryUtilsTest, IsLineIntersectingPolygon_EdgeGliding) {
     EXPECT_FALSE(GeometryUtils::isLineIntersectingPolygon(p1, p2, obstacle));
 }
 
+// ******************GeometryUtils::isLineCoverdByPolygon***************
+
+// Test 1: Line im Polygon
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInside) {
+    Polygon polygon = createSquare();
+    Point a = {-5.0, -5.0};
+    Point b = {5.0, 5.0};
+
+    EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+}
+
+// Test 2: Line im Polygon, aber berührt die Kante
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchEdge) {
+    Polygon polygon = createSquare();
+    Point a = {-5.0, -10.0};
+    Point b = {5.0, 5.0};
+
+    EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+}
+
+// Test 3: Line im Polygon, aber berührt die Polygonkoordinate 
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchCoord) {
+    Polygon polygon = createSquare();
+    Point a = {-10.0, -10.0};
+    Point b = {5.0, 5.0};
+
+    EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+}
+
+// Test 4: Line außerhalb vom Polygon
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineOutside) {
+    Polygon polygon = createSquare();
+    Point a = {-50.0, -50.0};
+    Point b = {50.0, -50.0};
+
+    EXPECT_FALSE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+}
+
+// Test 5: Line kruezt Polygon
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineCross) {
+    Polygon polygon = createSquare();
+    Point a = {-50.0, -50.0};
+    Point b = {50.0, 50.0};
+
+    EXPECT_FALSE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+}
+
 // ******************GeometryUtils::calculateDistance*******************
 
 // 1.0 Berechne Distanz gröeßr 0

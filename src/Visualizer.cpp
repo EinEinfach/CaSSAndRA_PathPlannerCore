@@ -112,6 +112,9 @@ namespace Planner
                 Point p = pts.front();
                 file << "<text x=\"" << transformX(p.x) << "\" y=\"" << transformY(p.y) - 8
                      << "\" fill=\"darkgreen\" font-weight=\"bold\" font-size=\"8\" font-family=\"Arial\">" << i << "</text>\n";
+                file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
+                     << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
+                     << "\" stroke=\"green\" stroke-width=\"0.5\" stroke-dasharray=\"5,5\" />\n";
             }
         }
 
