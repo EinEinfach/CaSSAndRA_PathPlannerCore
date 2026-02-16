@@ -32,12 +32,19 @@ namespace Planner
             for (size_t i = 0; i < perimeterPoints.size(); ++i)
             {
                 Point intersect;
+                // Prüfe echte Durchschüsse
                 if (GeometryUtils::getIntersectionPoint(perimeterPoints[i],
                                                         perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
                 {
                     x_intersections.push_back(intersect.x);
                 }
-                // prüfe ob es bereich gibt wo die Linie auf dem Perimeter liegt, wenn ja, füge diese Linie hnzu
+                // Prüfe Berührungen
+                if (GeometryUtils::getTouchPoint(perimeterPoints[i],
+                                                        perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
+                {
+                    x_intersections.push_back(intersect.x);
+                }
+                // Prüfe ob es bereich gibt wo die Linie auf dem Perimeter liegt, wenn ja, füge diese Linie hnzu
                 LineString intersectLine;
                 if (GeometryUtils::getIntersectionLine(perimeterPoints[i], perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersectLine))
                 {
@@ -56,12 +63,20 @@ namespace Planner
                 for (size_t i = 0; i < obsPts.size(); ++i)
                 {
                     Point intersect;
+                    // Prüfe echte Durchschüsse
                     if (GeometryUtils::getIntersectionPoint(obsPts[i],
                                                             obsPts[(i + 1) % obsPts.size()], c, d, intersect))
                     {
                         x_intersections.push_back(intersect.x);
                     }
-                    // prüfe ob es bereich gibt wo die Linie auf dem Obstacle liegt, wenn ja, füge diese Linie hnzu
+                    // Prüfe Berührungen
+                    if (GeometryUtils::getTouchPoint(obsPts[i],
+                                                            obsPts[(i + 1) % obsPts.size()], c, d, intersect))
+                    {
+                        x_intersections.push_back(intersect.x);
+                    }
+
+                    // Prüfe ob es bereich gibt wo die Linie auf dem Obstacle liegt, wenn ja, füge diese Linie hnzu
                     LineString intersectLine;
                     if (GeometryUtils::getIntersectionLine(obsPts[i], obsPts[(i + 1) % obsPts.size()], c, d, intersectLine))
                     {

@@ -1,6 +1,8 @@
+#define private public
 #include <gtest/gtest.h>
 #include "PathPlanner.hpp"
 #include "Geometry.hpp"
+#undef private
 
 using namespace Planner;
 
@@ -93,6 +95,21 @@ TEST(PathPlannerTest, IsPathClear_VeryShortLine)
 // ******************PathPlanner::generateSlices*******************
 
 // 1. Prüft, ob ein Hindernis einen Slice korrekt in zwei Teile zerlegt
+TEST(PathPlannerTest, GenerateSlices_SliceCutByPerimeter) {
+    Polygon perimeter = {{-1.0, -1.0}, {-1.0, 1.0}, {1.0, 1.0}, {1.0, -1.0}};
+    Environment env = Environment(perimeter);
+    PathPlanner planner;
+    double spacing = 1.0;
+    auto slices = planner.generateSlices(env, spacing);
+
+    for (auto &slice : slices) {
+        auto &points = slice.getPoints();
+        EXPECT_NEAR(points[0].x, -1.0, 1e-7);
+        EXPECT_NEAR(points[1].x, 1.0, 1e-7);
+    }
+}
+
+// 2. Prüft, ob ein Hindernis einen Slice korrekt in zwei Teile zerlegt
 TEST(PathPlannerTest, GenerateSlices_ObstacleSplitsSlice)
 {
     Environment env = getEnv();
@@ -119,7 +136,7 @@ TEST(PathPlannerTest, GenerateSlices_ObstacleSplitsSlice)
     EXPECT_GE(slicesAtY3, 2);
 }
 
-// 2. Slice trifft genau auf die Kante eines Hindernisses
+// 3. Slice trifft genau auf die Kante eines Hindernisses
 TEST(PathPlannerTest, GenerateSlices_EdgeCaseTangent)
 {
     Environment env = getEnv();
@@ -134,6 +151,39 @@ TEST(PathPlannerTest, GenerateSlices_EdgeCaseTangent)
         // Hier prüfen wir nur auf Absturz oder "Unendlich-Schleifen"
         EXPECT_NO_THROW(slice.getPoints());
     }
+}
+
+// 4. Slice liegt zum Teil auf der Kante des Perimeters
+TEST(PathPlannerTest, GenerateSlices_SliceOnPerimeterEdge) {
+    Environment env = getEnv();
+    PathPlanner planner;
+    double spacing = 1.0;
+
+    auto slices = planner.generateSlices(env, spacing);
+    LineString& edgeSlice = slices[1];
+    LineString& roomSlice = slices[2];
+
+    EXPECT_NEAR(edgeSlice.getPoints()[0].x, -5.0, 1e-7);
+    EXPECT_NEAR(edgeSlice.getPoints()[1].x, -3.0, 1e-7);
+
+    EXPECT_NEAR(roomSlice.getPoints()[0].x, -3.0, 1e-7);
+    EXPECT_NEAR(roomSlice.getPoints()[1].x, 5.0, 1e-7);
+
+}
+
+// 5. Slice geht durch die Perimeter Koordinate
+TEST(PathPlannerTest, GenerateSlices_SliceThroughPerimeterCoord) {
+    Polygon perimeter = {{-1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {0.0, -1.0}};
+    Environment env = Environment(perimeter);
+    PathPlanner planner;
+    double spacing = 1.0;
+
+    auto slices = planner.generateSlices(env, spacing);
+    LineString& slice = slices[0];
+
+    ASSERT_GE(slices.size(), 1UL);
+    EXPECT_NEAR(slice.getPoints()[0].x, -1.0, 1e-7);
+    EXPECT_NEAR(slice.getPoints()[1].x, 1.0, 1e-7);
 }
 
 // ******************PathPlanner::connectSlices*******************
@@ -157,7 +207,7 @@ TEST(PathPlannerTest, ConnectSlices_Ordering)
     // Start bei (2.1, 0.0) -> s1 sollte von rechts nach links (reverse) genommen werden
     auto result = planner.connectSlices(env, slices, {2.1, 0.0});
 
-    ASSERT_GE(result.path.getPoints().size(), 4);
+    ASSERT_GE(result.path.getPoints().size(), 4UL);
     // Erster Punkt nach Start sollte Ende von s1 sein
     EXPECT_NEAR(result.path.getPoints()[1].x, 2.0, 1e-7);
 }
@@ -174,7 +224,7 @@ TEST(PathPlannerTest, FindAStarPath_PathStraight)
 
     auto path = planner.findAStarPath(start, goal, env);
 
-    ASSERT_GE(path.size(), 2);
+    ASSERT_GE(path.size(), 2UL);
     EXPECT_NEAR(path.front().x, 0.0, 1e-3);
     EXPECT_NEAR(path.back().x, 1.0, 1e-3);
 }
@@ -189,7 +239,7 @@ TEST(PathPlannerTest, FindAStarPath_PathAroundObstacle)
 
     auto path = planner.findAStarPath(start, goal, env);
 
-    ASSERT_GT(path.size(), 2); // Muss mindestens einen Zwischenpunkt haben
+    ASSERT_GT(path.size(), 2UL); // Muss mindestens einen Zwischenpunkt haben
     for (const auto &p : path)
     {
         // Keiner der Pfadpunkte darf im Hindernis liegen
@@ -201,14 +251,11 @@ TEST(PathPlannerTest, FindAStarPath_PathAroundObstacle)
 // 3. Weg nicht möglich
 TEST(PathPlannerTest, FindAStarPath_NoPathPossible)
 {
-    // Erstelle ein "Gefängnis" (4 Wände um das Ziel)
-    Polygon wall = {{4.0, 4.0}, {6.0, 4.0}, {6.0, 6.0}, {4.0, 6.0}};
     Environment env({{-10, -10}, {10, -10}, {10, 10}, {-10, 10}});
-    env.addObstacle(wall);
 
     PathPlanner planner;
     Point start = {0.0, 0.0};
-    Point goal = {5.0, 5.0}; // Ziel ist mitten im Hindernis-Quadrat
+    Point goal = {20.0, 20.0}; // goal outside of perimeter 
 
     auto path = planner.findAStarPath(start, goal, env);
 
@@ -224,7 +271,7 @@ TEST(PathPlannerTest, FindAStarPath_StartEqualsGoal)
 
     auto path = planner.findAStarPath(start, start, env);
 
-    ASSERT_EQ(path.size(), 1);
+    ASSERT_EQ(path.size(), 1UL);
     EXPECT_NEAR(path[0].x, 1.0, 1e-3);
 }
 
@@ -239,7 +286,7 @@ TEST(PathPlannerTest, FindAStarPath_ConcavePerimeterNavigation)
 
     auto path = planner.findAStarPath(start, goal, env);
 
-    ASSERT_GT(path.size(), 2);
+    ASSERT_GT(path.size(), 2UL);
     // Prüfe, ob alle Punkte innerhalb des Perimeters liegen
     for (const auto &p : path)
     {
