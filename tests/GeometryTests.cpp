@@ -66,10 +66,34 @@ TEST(GeometryUtilsTest, GetIntersection_CollinearSeparate)
     EXPECT_FALSE(GeometryUtils::getIntersectionPoint(a, b, c, d, out));
 }
 
+// ******************GeometryUtils::getTouchPoint**********************
+
+// 1. T-Kreuzung (Berührung am Endpunkt von CD auf der Strecke AB)
+TEST(GeometryUtilsTest, GetTouchPoint_LineTouch)
+{
+    Point out;
+    EXPECT_TRUE(GeometryUtils::getTouchPoint({0, 0}, {10, 0}, {5, 0}, {5, 5}, out));
+}
+
+// 2. Linie kreuzt die andere
+TEST(GeometryUtilsTest, GetTouchPoint_LineCross)
+{
+    Point out;
+    EXPECT_FALSE(GeometryUtils::getTouchPoint({0, 0}, {10, 10}, {0, 10}, {10, 0}, out));
+}
+
+// 3. Linien berühren sich am Ende
+TEST(GeometryUtilsTest, GetTouchPoint_LineTouchAtEnd)
+{
+    Point out;
+    EXPECT_TRUE(GeometryUtils::getTouchPoint({0, 0}, {10, 0}, {10, 0}, {10, 10}, out));
+}
+
 // ******************GeometryUtils::getIntersectionLine****************
 
 // Test 1: Überlapung zum Teil
-TEST(GeometryUtilsTest, GetIntersectionLine_Overlap) {
+TEST(GeometryUtilsTest, GetIntersectionLine_Overlap)
+{
     Point a{0, 0}, b{10, 0};
     Point c{5, 0}, d{15, 0}; // Überlappt von 5 bis 10
     LineString out;
@@ -79,7 +103,7 @@ TEST(GeometryUtilsTest, GetIntersectionLine_Overlap) {
     ASSERT_TRUE(result);
     auto pts = out.getPoints();
     ASSERT_EQ(pts.size(), 2UL);
-    
+
     // Wir erwarten das Segment von (5,0) bis (10,0)
     EXPECT_NEAR(pts[0].x, 5.0, 1e-7);
     EXPECT_NEAR(pts[1].x, 10.0, 1e-7);
@@ -88,7 +112,8 @@ TEST(GeometryUtilsTest, GetIntersectionLine_Overlap) {
 }
 
 // Test 2: Überlapung gleich
-TEST(GeometryUtilsTest, GetIntersectionLine_OverlapEqual) {
+TEST(GeometryUtilsTest, GetIntersectionLine_OverlapEqual)
+{
     Point a{-5, -5}, b{10, 10};
     Point c{-5, -5}, d{10, 10}; // Überlappt gleich
     LineString out;
@@ -98,7 +123,7 @@ TEST(GeometryUtilsTest, GetIntersectionLine_OverlapEqual) {
     ASSERT_TRUE(result);
     auto pts = out.getPoints();
     ASSERT_EQ(pts.size(), 2UL);
-    
+
     // Wir erwarten das Segment von (5,0) bis (10,0)
     EXPECT_NEAR(pts[0].x, -5.0, 1e-7);
     EXPECT_NEAR(pts[1].x, 10.0, 1e-7);
@@ -106,10 +131,11 @@ TEST(GeometryUtilsTest, GetIntersectionLine_OverlapEqual) {
     EXPECT_NEAR(pts[1].x, 10.0, 1e-7);
 }
 
-// Test 3: Keine Überlapung 
-TEST(GeometryUtilsTest, GetIntersectionLine_NoOverlap) {
+// Test 3: Keine Überlapung
+TEST(GeometryUtilsTest, GetIntersectionLine_NoOverlap)
+{
     Point a{-5, -5}, b{10, 10};
-    Point c{-6, -7}, d{10, 10}; 
+    Point c{-6, -7}, d{10, 10};
     LineString out;
 
     bool result = GeometryUtils::getIntersectionLine(a, b, c, d, out);
@@ -188,7 +214,7 @@ TEST(GeometryUtilsTest, IsPointInPolygon_Concave)
 // 6. Test: kompletter durchschuss
 TEST(GeometryUtilsTest, IsLineIntersectingPolygon_ThroughPass)
 {
-    Polygon obstacle = createSquare(); 
+    Polygon obstacle = createSquare();
 
     // Linie geht von links (-15, 5) nach rechts (15, 5) mitten durch
     Point p1{-15, 5}, p2{15, 5};
@@ -200,9 +226,10 @@ TEST(GeometryUtilsTest, IsLineIntersectingPolygon_ThroughPass)
 }
 
 // 7. Test: Glitching
-TEST(GeometryUtilsTest, IsLineIntersectingPolygon_EdgeGliding) {
+TEST(GeometryUtilsTest, IsLineIntersectingPolygon_EdgeGliding)
+{
     Polygon obstacle = createSquare(); // 0,0 bis 10,10
-    
+
     // Linie liegt exakt auf der Oberkante (0,10) bis (10,10)
     Point p1{0, 10}, p2{10, 10};
     // Erwartung: FALSE, da wir nur "berühren/gleiten" und nicht "durchschießen"
@@ -212,7 +239,8 @@ TEST(GeometryUtilsTest, IsLineIntersectingPolygon_EdgeGliding) {
 // ******************GeometryUtils::isLineCoverdByPolygon***************
 
 // Test 1: Line im Polygon
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInside) {
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInside)
+{
     Polygon polygon = createSquare();
     Point a = {-5.0, -5.0};
     Point b = {5.0, 5.0};
@@ -221,7 +249,8 @@ TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInside) {
 }
 
 // Test 2: Line im Polygon, aber berührt die Kante
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchEdge) {
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchEdge)
+{
     Polygon polygon = createSquare();
     Point a = {-5.0, -10.0};
     Point b = {5.0, 5.0};
@@ -229,8 +258,9 @@ TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchEdge) {
     EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
 }
 
-// Test 3: Line im Polygon, aber berührt die Polygonkoordinate 
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchCoord) {
+// Test 3: Line im Polygon, aber berührt die Polygonkoordinate
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchCoord)
+{
     Polygon polygon = createSquare();
     Point a = {-10.0, -10.0};
     Point b = {5.0, 5.0};
@@ -239,7 +269,8 @@ TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchCoord) {
 }
 
 // Test 4: Line außerhalb vom Polygon
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineOutside) {
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineOutside)
+{
     Polygon polygon = createSquare();
     Point a = {-50.0, -50.0};
     Point b = {50.0, -50.0};
@@ -248,7 +279,8 @@ TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineOutside) {
 }
 
 // Test 5: Line kruezt Polygon
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineCross) {
+TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineCross)
+{
     Polygon polygon = createSquare();
     Point a = {-50.0, -50.0};
     Point b = {50.0, 50.0};
@@ -321,21 +353,22 @@ TEST(GeometryUtilsTest, RotatePoint_00)
 }
 
 // 5. Test: Rotiere einen Linestring
-TEST(GeometryUtilsTest, RotateLineString) {
+TEST(GeometryUtilsTest, RotateLineString)
+{
     LineString ls;
     ls.addPoint({1, 0});
     ls.addPoint({0, 1});
-    
+
     // 90 Grad Drehung
     ls.rotate(M_PI / 2.0);
-    
+
     auto pts = ls.getPoints();
     ASSERT_EQ(pts.size(), 2UL);
-    
+
     // (1,0) wird zu (0,1)
     EXPECT_NEAR(pts[0].x, 0.0, 1e-7);
     EXPECT_NEAR(pts[0].y, 1.0, 1e-7);
-    
+
     // (0,1) wird zu (-1,0)
     EXPECT_NEAR(pts[1].x, -1.0, 1e-7);
     EXPECT_NEAR(pts[1].y, 0.0, 1e-7);

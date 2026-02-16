@@ -62,6 +62,45 @@ namespace Planner
         return false;
     }
 
+    bool GeometryUtils::getTouchPoint(Point a, Point b, Point c, Point d, Point &out)
+    {
+        double s1_x = b.x - a.x;
+        double s1_y = b.y - a.y;
+        double s2_x = d.x - c.x;
+        double s2_y = d.y - c.y;
+
+        double denom = (-s2_x * s1_y + s1_x * s2_y);
+
+        // Wenn parallel, berühren sie sich entweder gar nicht oder überlappen (Segment).
+        // Gemäß Anforderung (ähnlich getIntersectionPoint für Punkte) geben wir hier false.
+        if (std::abs(denom) < 1e-10)
+            return false;
+
+        double s = (-s1_y * (a.x - c.x) + s1_x * (a.y - c.y)) / denom;
+        double t = (s2_x * (a.y - c.y) - s2_y * (a.x - c.x)) / denom;
+
+        double eps = 1e-9;
+
+        // 1. Prüfen, ob der Schnittpunkt überhaupt auf beiden Segmenten liegt (inkl. Endpunkte)
+        if (s >= -eps && s <= 1.0 + eps && t >= -eps && t <= 1.0 + eps)
+        {
+            // 2. Prüfen, ob es eine Kreuzung im Inneren ist
+            // Wenn BEIDE Parameter im "echten" Inneren liegen, ist es ein Cross, kein Touch.
+            if (s > eps && s < 1.0 - eps && t > eps && t < 1.0 - eps)
+            {
+                return false; // Es kreuzt -> false
+            }
+
+            // 3. Wenn wir hier sind, liegt der Punkt auf mindestens einem Endpunkt
+            // Wir berechnen den Punkt und geben true zurück.
+            out.x = a.x + (t * s1_x);
+            out.y = a.y + (t * s1_y);
+            return true;
+        }
+
+        return false; // Berühren sich gar nicht
+    }
+
     bool GeometryUtils::getIntersectionLine(Point a, Point b, Point c, Point d, LineString &outLine)
     {
         // 1. Richtungsvektoren

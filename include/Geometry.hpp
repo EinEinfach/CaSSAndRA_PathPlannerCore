@@ -43,6 +43,9 @@ namespace Planner
         // Gibt true zurück, wenn sie sich schneiden, und schreibt das Ergebnis in intersectionPoint
         static bool getIntersectionPoint(Point a, Point b, Point c, Point d, Point &out);
 
+        // Prüft, ob und wo sich zwie Liniensegmente berühren
+        static bool getTouchPoint(Point a, Point b, Point c, Point d, Point &out);
+
         // Prüft ob zwei Lineinsegmenten aufeinander liegen und wenn ja gibt es eine kolineare Linie zurück
         static bool getIntersectionLine(Point a, Point b, Point c, Point d, LineString &outline);
 
