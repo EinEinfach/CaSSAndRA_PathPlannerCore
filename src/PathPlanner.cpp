@@ -371,161 +371,182 @@ namespace Planner
         return nodes;
     }
 
-    struct Node
-    {
-        Point pos;
-        double gCost; // Weg vom Start bis hierher
-        double hCost; // Schätzung bis zum Ziel (Luftlinie)
-        int parentIdx = -1;
-
-        double fCost() const { return gCost + hCost; }
-    };
-
-    // Interne Struktur für den A*-Algorithmus
-    struct AStarNode
-    {
-        Point pos;
-        double gCost;
-        double hCost;
-        int parentIdx;
-        bool isWire;
-        size_t wireIdx;
-
-        double fCost() const { return gCost + hCost; }
-    };
-
-    std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env)
-    {
-        /*
+    //******************* A Star ****************************
+    /*
         A* Regel für Virtual Wire
         1. Man darf an jedem beliebiger virtual Wire Koordinate virtual Wire betreten (unter der Berücksichtigung isPathClear)
         2. Man darf an jeder beliebigen virtual Wire Koordinate den virtual Wire verlassen (unter der Berücksichtigung isPathClear)
         3. Innerhalb des virtual Wire darf man die Punkte nur nacheinander Abfahren (rückwärts oder vorwaärts) 1 -> 2 -> 3 ist Ok. Nicht ok ist 1 -> 3 -> 2
         4. Die Bewegung innerhalb des virtual Wires ignoriert den isPathClear Bedingung
-        */
+    */
 
-        // 1. Alle Navigationsknoten vorbereiten (Regeln 1-4 Infrastruktur)
-        std::vector<NavNode> navNodes = getExtendedNavNodes(env);
+    std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env)
+    {
+        auto navNodes = prepareNavigationGraph(goal, env);
 
-        // Ziel als NavNode hinzufügen (kein Wire)
-        navNodes.push_back({goal, false, 0});
-
-        std::vector<AStarNode> openList;
+        std::vector<AStarNode> openList = {{start, 0.0, GeometryUtils::calculateDistance(start, goal), -1, false, 0}};
         std::vector<AStarNode> closedList;
-
-        // Startknoten initialisieren
-        // Wir prüfen nicht, ob Start auf Wire liegt, er wird als normaler Punkt behandelt
-        openList.push_back({start, 0.0, GeometryUtils::calculateDistance(start, goal), -1, false, 0});
 
         while (!openList.empty())
         {
-            // Knoten mit niedrigstem fCost finden
-            size_t bestIdx = 0;
-            for (size_t i = 1; i < openList.size(); ++i)
-            {
-                if (openList[i].fCost() < openList[bestIdx].fCost())
-                    bestIdx = i;
-            }
-
+            // 1. Nächsten besten Punkt wählen
+            size_t bestIdx = findBestNodeIdx(openList);
             AStarNode current = openList[bestIdx];
 
-            // Ziel erreicht?
+            // 2. Ziel erreicht?
             if (GeometryUtils::calculateDistance(current.pos, goal) < 0.001)
             {
-                std::vector<Point> path;
-                path.push_back(current.pos);
-                while (current.parentIdx != -1)
-                {
-                    current = closedList[current.parentIdx];
-                    path.push_back(current.pos);
-                }
-                std::reverse(path.begin(), path.end());
-                return path;
+                std::vector<Point> rawPath = reconstructPath(current, closedList);
+                return smoothPath(rawPath, env);
             }
 
+            // 3. In das Logbuch (Closed List) übernehmen
             openList.erase(openList.begin() + bestIdx);
             int currentInClosedIdx = static_cast<int>(closedList.size());
             closedList.push_back(current);
 
-            // 2. Nachbarn prüfen
+            // 4. Umgebung erkunden
             for (const auto &nextNav : navNodes)
             {
                 if (GeometryUtils::calculateDistance(current.pos, nextNav.pos) < 0.001)
                     continue;
 
-                bool canMove = false;
-                double weightMultiplier = 1.0;
+                Movement move = checkMovementRules(current, nextNav, env);
 
-                // LOGIK-CHECK FÜR VIRTUAL WIRE
-                if (current.isWire && nextNav.isWire)
+                if (move.allowed)
                 {
-                    // REGEL 3 & 4: Innerhalb des Drahtes nur Nachbarn (+/- 1 Index)
-                    int idxDiff = std::abs(static_cast<int>(current.wireIdx) - static_cast<int>(nextNav.wireIdx));
-                    if (idxDiff == 1)
-                    {
-                        canMove = true;
-                        weightMultiplier = 0.1; // Hohe Priorität (Autobahn-Bonus)
-                        // isPathClear wird hier ignoriert (Regel 4)
-                    }
-                }
-
-                // REGEL 1 & 2: Normaler Weg oder Draht betreten/verlassen
-                if (!canMove)
-                {
-                    if (isPathClear(current.pos, nextNav.pos, env))
-                    {
-                        canMove = true;
-                        weightMultiplier = 1.0;
-                    }
-                }
-
-                if (canMove)
-                {
-                    double dist = GeometryUtils::calculateDistance(current.pos, nextNav.pos);
-                    double newGCost = current.gCost + (dist * weightMultiplier);
-
-                    // Check Closed List
-                    bool inClosed = false;
-                    for (const auto &cNode : closedList)
-                    {
-                        if (GeometryUtils::calculateDistance(cNode.pos, nextNav.pos) < 0.001)
-                        {
-                            inClosed = true;
-                            break;
-                        }
-                    }
-                    if (inClosed)
-                        continue;
-
-                    // Check Open List
-                    bool inOpen = false;
-                    for (auto &oNode : openList)
-                    {
-                        if (GeometryUtils::calculateDistance(oNode.pos, nextNav.pos) < 0.001)
-                        {
-                            if (newGCost < oNode.gCost)
-                            {
-                                oNode.gCost = newGCost;
-                                oNode.parentIdx = currentInClosedIdx;
-                            }
-                            inOpen = true;
-                            break;
-                        }
-                    }
-
-                    if (!inOpen)
-                    {
-                        openList.push_back({nextNav.pos,
-                                            newGCost,
-                                            GeometryUtils::calculateDistance(nextNav.pos, goal),
-                                            currentInClosedIdx,
-                                            nextNav.isWire,
-                                            nextNav.wireIdx});
-                    }
+                    updateOpenList(current, nextNav, move.costMultiplier, goal, currentInClosedIdx, openList, closedList);
                 }
             }
         }
-        return {}; // Kein Pfad gefunden
+        return {}; // Sackgasse
     }
 
+    std::vector<PathPlanner::NavNode> PathPlanner::prepareNavigationGraph(Point goal, const Environment &env)
+    {
+        std::vector<PathPlanner::NavNode> nodes = getExtendedNavNodes(env);
+        // Das Ziel wird als "normaler" Knoten ohne Wire-Funktion ergänzt
+        nodes.push_back({goal, false, 0});
+        return nodes;
+    }
+
+    size_t PathPlanner::findBestNodeIdx(const std::vector<AStarNode> &openList)
+    {
+        size_t bestIdx = 0;
+        for (size_t i = 1; i < openList.size(); ++i)
+        {
+            if (openList[i].fCost() < openList[bestIdx].fCost())
+                bestIdx = i;
+        }
+        return bestIdx;
+    }
+
+    PathPlanner::Movement PathPlanner::checkMovementRules(const AStarNode &current, const PathPlanner::NavNode &next, const Environment &env)
+    {
+        // REGEL 3 & 4: Auf der Autobahn (Virtual Wire)
+        if (current.isWire && next.isWire)
+        {
+            int idxDiff = std::abs(static_cast<int>(current.wireIdx) - static_cast<int>(next.wireIdx));
+            if (idxDiff == 1)
+            {
+                return {true, 0.1}; // Erlaubt ohne isPathClear, hoher Bonus
+            }
+        }
+
+        // REGEL 1 & 2: Landstraße (Normales Gelände / Auffahrt / Abfahrt)
+        if (isPathClear(current.pos, next.pos, env))
+        {
+            return {true, 1.0}; // Erlaubt, wenn Weg frei
+        }
+
+        return {false, 1.0}; // Blockiert
+    }
+
+    std::vector<Point> PathPlanner::reconstructPath(const PathPlanner::AStarNode &goalNode, const std::vector<PathPlanner::AStarNode> &closedList)
+    {
+        std::vector<Point> path;
+        PathPlanner::AStarNode current = goalNode;
+        path.push_back(current.pos);
+
+        while (current.parentIdx != -1)
+        {
+            current = closedList[current.parentIdx];
+            path.push_back(current.pos);
+        }
+
+        std::reverse(path.begin(), path.end());
+        return path;
+    }
+
+    void PathPlanner::updateOpenList(const AStarNode &current, const NavNode &nextNav,
+                                     double costMultiplier, Point goal, int currentInClosedIdx,
+                                     std::vector<AStarNode> &openList, const std::vector<AStarNode> &closedList)
+    {
+        double dist = GeometryUtils::calculateDistance(current.pos, nextNav.pos);
+        double newGCost = current.gCost + (dist * costMultiplier);
+
+        // Schon final besucht?
+        for (const auto &cNode : closedList)
+        {
+            if (GeometryUtils::calculateDistance(cNode.pos, nextNav.pos) < 0.001)
+                return;
+        }
+
+        // Schon in der Warteschlange?
+        for (auto &oNode : openList)
+        {
+            if (GeometryUtils::calculateDistance(oNode.pos, nextNav.pos) < 0.001)
+            {
+                if (newGCost < oNode.gCost)
+                {
+                    oNode.gCost = newGCost;
+                    oNode.parentIdx = currentInClosedIdx;
+                }
+                return;
+            }
+        }
+
+        // Ganz neuer Punkt!
+        openList.push_back({nextNav.pos,
+                            newGCost,
+                            GeometryUtils::calculateDistance(nextNav.pos, goal),
+                            currentInClosedIdx,
+                            nextNav.isWire,
+                            nextNav.wireIdx});
+    }
+
+    std::vector<Point> PathPlanner::smoothPath(const std::vector<Point> &path, const Environment &env)
+    {
+        if (path.size() < 3)
+            return path; // Nichts zu glätten
+
+        std::vector<Point> smoothed;
+        smoothed.push_back(path.front()); // Startpunkt immer behalten
+
+        size_t current = 0;
+        while (current < path.size() - 1)
+        {
+            size_t furthestVisible = current + 1;
+
+            // Wir schauen vom aktuellen Punkt so weit wie möglich nach vorne
+            for (size_t next = current + 2; next < path.size(); ++next)
+            {
+                if (isPathClear(path[current], path[next], env))
+                {
+                    furthestVisible = next;
+                }
+                else
+                {
+                    // Sobald ein Hindernis die Sicht blockiert,
+                    // nehmen wir den letzten freien Punkt
+                    break;
+                }
+            }
+
+            smoothed.push_back(path[furthestVisible]);
+            current = furthestVisible;
+        }
+
+        return smoothed;
+    }
 }

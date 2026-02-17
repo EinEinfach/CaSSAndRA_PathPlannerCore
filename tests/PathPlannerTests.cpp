@@ -359,3 +359,138 @@ TEST(PathPlannerTest, FindAStarPath_VirtualWireNavigation)
 
     EXPECT_TRUE(usedWireMidPoint) << "Der A* muss den Draht-Punkt (10,2) nutzen, da alle anderen Wege durch das Hindernis blockiert sind.";
 }
+
+// 7. Bewegunsregeln
+TEST(PathPlannerTest, FindAStarPath_CheckMovementRules)
+{
+    Environment env = getEnv();
+    // Hindernis bei x=5, das den Weg blockiert
+    Polygon obs;
+    obs.addPoint({4, -2});
+    obs.addPoint({6, -2});
+    obs.addPoint({6, 2});
+    obs.addPoint({4, 2});
+    env.addObstacle(obs);
+
+    // Aktueller Knoten: Auf dem Draht (Index 0) bei (2,0)
+    PathPlanner::AStarNode current = {{2, 0}, 0, 0, -1, true, 0};
+
+    // Fall 1: Nächster Drahtpunkt (Index 1) bei (10,0)
+    // Muss trotz Hindernis (bei x=5) erlaubt sein (Regel 4)
+    PathPlanner::NavNode nextWire = {{10, 0}, true, 1};
+    auto res1 = PathPlanner::checkMovementRules(current, nextWire, env);
+    EXPECT_TRUE(res1.allowed);
+    EXPECT_LT(res1.costMultiplier, 1.0); // Autobahn-Bonus
+
+    // Fall 2: Drahtpunkt (Index 2) bei (18,0)
+    // Nicht erlaubt, da kein direkter Nachbar (Regel 3)
+    PathPlanner::NavNode farWire = {{18, 0}, true, 2};
+    auto res2 = PathPlanner::checkMovementRules(current, farWire, env);
+    // Da isPathClear durch das Hindernis bei x=5 blockiert wird:
+    EXPECT_FALSE(res2.allowed);
+
+    // Fall 3: Verlassen des Drahtes zu einem freien Punkt
+    PathPlanner::NavNode freePoint = {{2, 5}, false, 0};
+    auto res3 = PathPlanner::checkMovementRules(current, freePoint, env);
+    EXPECT_TRUE(res3.allowed);
+    EXPECT_DOUBLE_EQ(res3.costMultiplier, 1.0); // Normaler Preis
+}
+
+// 8. Bester Knoten
+TEST(PathPlannerTest, FindAStarPath_FindBestNodeIdx)
+{
+    std::vector<PathPlanner::AStarNode> openList;
+    // gCost (gelaufen) + hCost (geschätzt) = fCost
+    openList.push_back({{0, 0}, 10.0, 5.0, -1, false, 0}); // f=15
+    openList.push_back({{1, 1}, 2.0, 3.0, -1, false, 0});  // f=5 (Bester!)
+    openList.push_back({{2, 2}, 5.0, 8.0, -1, false, 0});  // f=13
+
+    size_t best = PathPlanner::findBestNodeIdx(openList);
+    EXPECT_EQ(best, 1UL);
+}
+
+// 9. Bau Pfad zusammen
+TEST(PathPlannerTest, FindAStarPath_ReconstructPath)
+{
+    std::vector<PathPlanner::AStarNode> closedList;
+    // Wir bauen eine Kette: Start(0) -> Mitte(1) -> Ziel(2)
+    closedList.push_back({{0, 0}, 0, 0, -1, false, 0}); // Idx 0
+    closedList.push_back({{5, 5}, 0, 0, 0, false, 0});  // Idx 1 (Parent 0)
+
+    PathPlanner::AStarNode goalNode = {{10, 10}, 0, 0, 1, false, 0}; // Parent 1
+
+    auto path = PathPlanner::reconstructPath(goalNode, closedList);
+
+    ASSERT_EQ(path.size(), 3UL);
+    EXPECT_DOUBLE_EQ(path[0].x, 0.0);
+    EXPECT_DOUBLE_EQ(path[1].x, 5.0);
+    EXPECT_DOUBLE_EQ(path[2].x, 10.0);
+}
+
+// 10. Offene Punkte Liste updaten
+TEST(PathPlannerTest, FindAStarPath_UpdateOpenList)
+{
+    std::vector<PathPlanner::AStarNode> openList;
+    std::vector<PathPlanner::AStarNode> closedList;
+    Point goal{10, 10};
+
+    PathPlanner::AStarNode current = {{0, 0}, 0.0, 10.0, -1, false, 0};
+    PathPlanner::NavNode next = {{5, 0}, false, 0};
+
+    // 1. Neu hinzufügen
+    PathPlanner::updateOpenList(current, next, 1.0, goal, 0, openList, closedList);
+    ASSERT_EQ(openList.size(), 1UL);
+    EXPECT_DOUBLE_EQ(openList[0].gCost, 5.0);
+
+    // 2. Ein besserer Weg zum selben Punkt (über einen Bonus-Draht)
+    // Wir simulieren einen neuen Aufruf mit einem extrem kleinen Multiplier
+    PathPlanner::updateOpenList(current, next, 0.1, goal, 0, openList, closedList);
+    ASSERT_EQ(openList.size(), 1UL);
+    EXPECT_DOUBLE_EQ(openList[0].gCost, 0.5); // 5.0 * 0.1
+}
+
+// 11. Glättung
+TEST(PathPlannerTest, FindAStarPath_PathSmoothingRespectsObstacles)
+{
+    // 1. Setup Environment
+    Polygon perimeter;
+    perimeter.addPoint({0, 0});
+    perimeter.addPoint({20, 0});
+    perimeter.addPoint({20, 20});
+    perimeter.addPoint({0, 20});
+    Environment env(perimeter);
+
+    // Ein Hindernis in die Mitte legen
+    Polygon obs;
+    obs.addPoint({8, 5});
+    obs.addPoint({12, 5});
+    obs.addPoint({12, 15});
+    obs.addPoint({8, 15});
+    env.addObstacle(obs);
+
+    // 2. Ein künstlicher, zackiger Pfad
+    // Start (2,10) -> Punkt nah am Hindernis (7,10) -> Ziel (18,10)
+    // Die direkte Sichtlinie von (2,10) nach (18,10) ist durch das Hindernis (x=8 bis 12) geblockt!
+    std::vector<Point> jaggedPath = {
+        {2, 10},  // Start
+        {5, 10},  // Unnötiger Zwischenpunkt (Sicht frei)
+        {7, 10},  // Punkt vor dem Hindernis
+        {13, 10}, // Punkt nach dem Hindernis
+        {15, 10}, // Unnötiger Zwischenpunkt (Sicht frei)
+        {18, 10}  // Ziel
+    };
+
+    // 3. Glättung ausführen
+    auto smoothed = PathPlanner::smoothPath(jaggedPath, env);
+
+    // ERWARTUNG:
+    // - Der Punkt (5,10) muss verschwinden (Sicht von 2 nach 7 ist frei).
+    // - Der Punkt (15,10) muss verschwinden (Sicht von 13 nach 18 ist frei).
+    // - Die Punkte (7,10) und (13,10) MÜSSEN bleiben, da man nicht von 7 nach 13 sehen kann (Hindernis!).
+
+    EXPECT_EQ(smoothed.size(), 4UL);
+    EXPECT_DOUBLE_EQ(smoothed[0].x, 2.0);
+    EXPECT_DOUBLE_EQ(smoothed[1].x, 7.0);
+    EXPECT_DOUBLE_EQ(smoothed[2].x, 13.0);
+    EXPECT_DOUBLE_EQ(smoothed[3].x, 18.0);
+}

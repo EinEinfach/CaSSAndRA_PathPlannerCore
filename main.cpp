@@ -16,7 +16,7 @@ int main() {
 
     Point startPos = {0.0, 0.0};
     double offset = 1.0;
-    double angle = 0.0;
+    double angle = 0.3;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0},  {0.0, 10.0}};
@@ -25,8 +25,8 @@ int main() {
     Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
     myEnv1.addObstacle(obstacle1);
     myEnv1.addObstacle(obstacle2);
-    LineString virtualWire = {{2.0, 10.0}, {18.0, 26.0}};
-    // myEnv1.setVirtualWire(virtualWire);
+    LineString virtualWire = {{2.0, 10.0}, {18.0, 14.0}, {18.0, 26.0}};
+    myEnv1.setVirtualWire(virtualWire);
 
     Polygon perimeter2 = {{-5.0, -5.0}, {-5.0, -3.0}, {-3.0, -3.0}, {-3.0, 3.0}, {-5.0, 3.0}, {-5.0, 5.0}, {5.0, 5.0}, {5.0, -5.0}};
     auto myEnv2 = Environment(perimeter2);
