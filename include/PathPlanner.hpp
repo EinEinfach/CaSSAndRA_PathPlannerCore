@@ -11,6 +11,12 @@ namespace Planner
             LineString path;
             std::vector<LineString> debugLines;
         };
+
+        struct NavNode {
+            Point pos;
+            bool isWire = false;
+            size_t wireIdx = 0;
+        };
         
         static std::vector<LineString> generateSlices(const Environment &env, double spacing);
         static PlanningResult connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
@@ -28,6 +34,7 @@ namespace Planner
         static BestNextSegment findBestNextFallback(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited);
         static void addSliceToPath(LineString &path, const LineString &slice, bool reverse);
         static std::vector<Point> getNavigationNodes(const Environment& env);
+        static std::vector<NavNode> getExtendedNavNodes(const Environment &env);
         static std::vector<Point> findAStarPath(Point start, Point goal, const Environment& env);
     };
 }

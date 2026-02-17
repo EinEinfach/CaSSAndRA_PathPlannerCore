@@ -332,6 +332,45 @@ namespace Planner
         return nodes;
     }
 
+    std::vector<PathPlanner::NavNode> PathPlanner::getExtendedNavNodes(const Environment &env)
+    {
+        std::vector<NavNode> nodes;
+        const double eps = 0.001; // Toleranz für Punkt-Gleichheit (1mm)
+
+        // Hilfsfunktion zum Prüfen auf Duplikate
+        auto isDuplicate = [&](Point p)
+        {
+            for (const auto &node : nodes)
+            {
+                double dx = node.pos.x - p.x;
+                double dy = node.pos.y - p.y;
+                if (std::sqrt(dx * dx + dy * dy) < eps)
+                    return true;
+            }
+            return false;
+        };
+
+        // 1. Virtual Wire Punkte zuerst (haben Vorrang wegen wireIdx)
+        const auto &wirePoints = env.getVirtualWire().getPoints();
+        for (size_t i = 0; i < wirePoints.size(); ++i)
+        {
+            nodes.push_back({wirePoints[i], true, i});
+        }
+
+        // 2. Standard Navigationspunkte (Ecken)
+        // Wir rufen deine bestehende getNavigationNodes() auf
+        std::vector<Point> basicNodes = getNavigationNodes(env);
+        for (const auto &p : basicNodes)
+        {
+            if (!isDuplicate(p))
+            {
+                nodes.push_back({p, false, 0});
+            }
+        }
+
+        return nodes;
+    }
+
     struct Node
     {
         Point pos;
@@ -342,19 +381,45 @@ namespace Planner
         double fCost() const { return gCost + hCost; }
     };
 
+    // Interne Struktur für den A*-Algorithmus
+    struct AStarNode
+    {
+        Point pos;
+        double gCost;
+        double hCost;
+        int parentIdx;
+        bool isWire;
+        size_t wireIdx;
+
+        double fCost() const { return gCost + hCost; }
+    };
+
     std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env)
     {
-        std::vector<Point> navPoints = getNavigationNodes(env);
-        navPoints.push_back(goal);
+        /*
+        A* Regel für Virtual Wire
+        1. Man darf an jedem beliebiger virtual Wire Koordinate virtual Wire betreten (unter der Berücksichtigung isPathClear)
+        2. Man darf an jeder beliebigen virtual Wire Koordinate den virtual Wire verlassen (unter der Berücksichtigung isPathClear)
+        3. Innerhalb des virtual Wire darf man die Punkte nur nacheinander Abfahren (rückwärts oder vorwaärts) 1 -> 2 -> 3 ist Ok. Nicht ok ist 1 -> 3 -> 2
+        4. Die Bewegung innerhalb des virtual Wires ignoriert den isPathClear Bedingung
+        */
 
-        std::vector<Node> openList;
-        std::vector<Node> closedList;
+        // 1. Alle Navigationsknoten vorbereiten (Regeln 1-4 Infrastruktur)
+        std::vector<NavNode> navNodes = getExtendedNavNodes(env);
 
-        openList.push_back({start, 0.0, GeometryUtils::calculateDistance(start, goal), -1});
+        // Ziel als NavNode hinzufügen (kein Wire)
+        navNodes.push_back({goal, false, 0});
+
+        std::vector<AStarNode> openList;
+        std::vector<AStarNode> closedList;
+
+        // Startknoten initialisieren
+        // Wir prüfen nicht, ob Start auf Wire liegt, er wird als normaler Punkt behandelt
+        openList.push_back({start, 0.0, GeometryUtils::calculateDistance(start, goal), -1, false, 0});
 
         while (!openList.empty())
         {
-            // 1. Besten Knoten aus Open List wählen
+            // Knoten mit niedrigstem fCost finden
             size_t bestIdx = 0;
             for (size_t i = 1; i < openList.size(); ++i)
             {
@@ -362,7 +427,7 @@ namespace Planner
                     bestIdx = i;
             }
 
-            Node current = openList[bestIdx];
+            AStarNode current = openList[bestIdx];
 
             // Ziel erreicht?
             if (GeometryUtils::calculateDistance(current.pos, goal) < 0.001)
@@ -378,27 +443,52 @@ namespace Planner
                 return path;
             }
 
-            // Von Open nach Closed verschieben
             openList.erase(openList.begin() + bestIdx);
             int currentInClosedIdx = static_cast<int>(closedList.size());
             closedList.push_back(current);
 
             // 2. Nachbarn prüfen
-            for (const auto &nextPos : navPoints)
+            for (const auto &nextNav : navNodes)
             {
-                // Punkt-Identität prüfen (nicht zu sich selbst springen)
-                if (GeometryUtils::calculateDistance(current.pos, nextPos) < 0.001)
+                if (GeometryUtils::calculateDistance(current.pos, nextNav.pos) < 0.001)
                     continue;
 
-                if (isPathClear(current.pos, nextPos, env))
-                {
-                    double newGCost = current.gCost + GeometryUtils::calculateDistance(current.pos, nextPos);
+                bool canMove = false;
+                double weightMultiplier = 1.0;
 
-                    // Check Closed List: Haben wir diesen Ort schon final besucht?
+                // LOGIK-CHECK FÜR VIRTUAL WIRE
+                if (current.isWire && nextNav.isWire)
+                {
+                    // REGEL 3 & 4: Innerhalb des Drahtes nur Nachbarn (+/- 1 Index)
+                    int idxDiff = std::abs(static_cast<int>(current.wireIdx) - static_cast<int>(nextNav.wireIdx));
+                    if (idxDiff == 1)
+                    {
+                        canMove = true;
+                        weightMultiplier = 0.1; // Hohe Priorität (Autobahn-Bonus)
+                        // isPathClear wird hier ignoriert (Regel 4)
+                    }
+                }
+
+                // REGEL 1 & 2: Normaler Weg oder Draht betreten/verlassen
+                if (!canMove)
+                {
+                    if (isPathClear(current.pos, nextNav.pos, env))
+                    {
+                        canMove = true;
+                        weightMultiplier = 1.0;
+                    }
+                }
+
+                if (canMove)
+                {
+                    double dist = GeometryUtils::calculateDistance(current.pos, nextNav.pos);
+                    double newGCost = current.gCost + (dist * weightMultiplier);
+
+                    // Check Closed List
                     bool inClosed = false;
                     for (const auto &cNode : closedList)
                     {
-                        if (GeometryUtils::calculateDistance(cNode.pos, nextPos) < 0.001)
+                        if (GeometryUtils::calculateDistance(cNode.pos, nextNav.pos) < 0.001)
                         {
                             inClosed = true;
                             break;
@@ -407,11 +497,11 @@ namespace Planner
                     if (inClosed)
                         continue;
 
-                    // Check Open List: Kennen wir diesen Ort schon und ist der neue Weg besser?
+                    // Check Open List
                     bool inOpen = false;
                     for (auto &oNode : openList)
                     {
-                        if (GeometryUtils::calculateDistance(oNode.pos, nextPos) < 0.001)
+                        if (GeometryUtils::calculateDistance(oNode.pos, nextNav.pos) < 0.001)
                         {
                             if (newGCost < oNode.gCost)
                             {
@@ -425,12 +515,17 @@ namespace Planner
 
                     if (!inOpen)
                     {
-                        openList.push_back({nextPos, newGCost, GeometryUtils::calculateDistance(nextPos, goal), currentInClosedIdx});
+                        openList.push_back({nextNav.pos,
+                                            newGCost,
+                                            GeometryUtils::calculateDistance(nextNav.pos, goal),
+                                            currentInClosedIdx,
+                                            nextNav.isWire,
+                                            nextNav.wireIdx});
                     }
                 }
             }
         }
-        return {};
+        return {}; // Kein Pfad gefunden
     }
 
 }

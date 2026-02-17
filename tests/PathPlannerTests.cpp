@@ -95,14 +95,16 @@ TEST(PathPlannerTest, IsPathClear_VeryShortLine)
 // ******************PathPlanner::generateSlices*******************
 
 // 1. Prüft, ob ein Hindernis einen Slice korrekt in zwei Teile zerlegt
-TEST(PathPlannerTest, GenerateSlices_SliceCutByPerimeter) {
+TEST(PathPlannerTest, GenerateSlices_SliceCutByPerimeter)
+{
     Polygon perimeter = {{-1.0, -1.0}, {-1.0, 1.0}, {1.0, 1.0}, {1.0, -1.0}};
     Environment env = Environment(perimeter);
     PathPlanner planner;
     double spacing = 1.0;
     auto slices = planner.generateSlices(env, spacing);
 
-    for (auto &slice : slices) {
+    for (auto &slice : slices)
+    {
         auto &points = slice.getPoints();
         EXPECT_NEAR(points[0].x, -1.0, 1e-7);
         EXPECT_NEAR(points[1].x, 1.0, 1e-7);
@@ -154,32 +156,33 @@ TEST(PathPlannerTest, GenerateSlices_EdgeCaseTangent)
 }
 
 // 4. Slice liegt zum Teil auf der Kante des Perimeters
-TEST(PathPlannerTest, GenerateSlices_SliceOnPerimeterEdge) {
+TEST(PathPlannerTest, GenerateSlices_SliceOnPerimeterEdge)
+{
     Environment env = getEnv();
     PathPlanner planner;
     double spacing = 1.0;
 
     auto slices = planner.generateSlices(env, spacing);
-    LineString& edgeSlice = slices[1];
-    LineString& roomSlice = slices[2];
+    LineString &edgeSlice = slices[1];
+    LineString &roomSlice = slices[2];
 
     EXPECT_NEAR(edgeSlice.getPoints()[0].x, -5.0, 1e-7);
     EXPECT_NEAR(edgeSlice.getPoints()[1].x, -3.0, 1e-7);
 
     EXPECT_NEAR(roomSlice.getPoints()[0].x, -3.0, 1e-7);
     EXPECT_NEAR(roomSlice.getPoints()[1].x, 5.0, 1e-7);
-
 }
 
 // 5. Slice geht durch die Perimeter Koordinate
-TEST(PathPlannerTest, GenerateSlices_SliceThroughPerimeterCoord) {
+TEST(PathPlannerTest, GenerateSlices_SliceThroughPerimeterCoord)
+{
     Polygon perimeter = {{-1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {0.0, -1.0}};
     Environment env = Environment(perimeter);
     PathPlanner planner;
     double spacing = 1.0;
 
     auto slices = planner.generateSlices(env, spacing);
-    LineString& slice = slices[0];
+    LineString &slice = slices[0];
 
     ASSERT_GE(slices.size(), 1UL);
     EXPECT_NEAR(slice.getPoints()[0].x, -1.0, 1e-7);
@@ -276,7 +279,7 @@ TEST(PathPlannerTest, FindAStarPath_NoPathPossible)
 
     PathPlanner planner;
     Point start = {0.0, 0.0};
-    Point goal = {20.0, 20.0}; // goal outside of perimeter 
+    Point goal = {20.0, 20.0}; // goal outside of perimeter
 
     auto path = planner.findAStarPath(start, goal, env);
 
@@ -313,4 +316,46 @@ TEST(PathPlannerTest, FindAStarPath_ConcavePerimeterNavigation)
     {
         EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon(p, env.getPerimeter()));
     }
+}
+
+// 6. Virtual Wire
+TEST(PathPlannerTest, FindAStarPath_VirtualWireNavigation)
+{
+    // Perimeter: 0,0 bis 20,20
+    Environment env = Environment({{0, 0}, {20, 0}, {20, 20}, {0, 20}});
+
+    // Virtual Wire: Eine "Schiene" von (2,2) bis (18,2)
+    LineString wire;
+    wire.addPoint({2, 2});  // Index 0
+    wire.addPoint({10, 2}); // Index 1
+    wire.addPoint({18, 2}); // Index 2
+    env.setVirtualWire(wire);
+
+    // Hindernis, das ALLES blockiert (von y=-5 bis y+5),
+    // außer die Sonderregel für den Draht.
+    Polygon obs;
+    obs.addPoint({5, -5}); // Tief genug, um y=0 zu blockieren
+    obs.addPoint({6, -5});
+    obs.addPoint({6, 5}); // Hoch genug, um y=2 theoretisch zu blockieren
+    obs.addPoint({5, 5});
+    env.addObstacle(obs);
+
+    // Start und Ziel liegen auf y=0
+    Point start{2, 0};
+    Point goal{18, 0};
+
+    auto path = PathPlanner::findAStarPath(start, goal, env);
+
+    // PRÜFUNGEN:
+    ASSERT_FALSE(path.empty()) << "A* sollte einen Weg über den Draht finden, da dieser das Hindernis ignoriert.";
+
+    // Check: Wurde der Draht-Mittelpunkt genutzt?
+    bool usedWireMidPoint = false;
+    for (const auto &p : path)
+    {
+        if (std::abs(p.x - 10.0) < 0.1 && std::abs(p.y - 2.0) < 0.1)
+            usedWireMidPoint = true;
+    }
+
+    EXPECT_TRUE(usedWireMidPoint) << "Der A* muss den Draht-Punkt (10,2) nutzen, da alle anderen Wege durch das Hindernis blockiert sind.";
 }

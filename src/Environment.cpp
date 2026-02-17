@@ -29,6 +29,10 @@ namespace Planner
         return obstacles;
     }
 
+    const LineString& Environment::getVirtualWire() const{
+        return virtualWire;
+    }
+
     void Environment::rotate(double angleRad) {
         perimeter.rotate(angleRad);
         

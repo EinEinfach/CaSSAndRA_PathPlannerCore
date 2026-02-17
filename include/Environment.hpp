@@ -15,6 +15,7 @@ namespace Planner
 
         const Polygon& getPerimeter() const;
         const std::vector<Polygon>& getObstacles() const;
+        const LineString& getVirtualWire() const;
 
         void rotate(double angleRad);
 
