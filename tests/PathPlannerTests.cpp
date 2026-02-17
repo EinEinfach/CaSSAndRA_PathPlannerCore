@@ -212,6 +212,27 @@ TEST(PathPlannerTest, ConnectSlices_Ordering)
     EXPECT_NEAR(result.path.getPoints()[1].x, 2.0, 1e-7);
 }
 
+// 2. Testet, ob Slices in der richtigen Reihenfolge verbunden werden (Slices zwischen Obstacle und Perimeter)
+TEST(PathPlannerTest, ConnectSlices_OrderingBetweenObsPer)
+{
+    Environment env = getEnv();
+    PathPlanner planner;
+
+    std::vector<LineString> slices;
+    // Zwei parallele Slices manuell erstellen
+    LineString s1;
+    s1.addPoint({4.0, 2.0});
+    s1.addPoint({5.0, 2.0});
+    slices.push_back(s1);
+
+    // Start bei (4.0, 3.0) -> s1 sollte von rechts nach links (forward) genommen werden
+    auto result = planner.connectSlices(env, slices, {4.0, 3.0});
+
+    // Erster Punkt nach Start sollte Anfang von s1 sein
+    EXPECT_NEAR(result.path.getPoints()[1].x, 4.0, 1e-7);
+    // Letzter Punkt im Path sollte Ende von s1 sein
+    EXPECT_NEAR(result.path.getPoints()[2].x, 5.0, 1e-7);
+}
 // ******************PathPlanner::findAStarPath*******************
 
 // 1. Direkter Weg ohne Hindernisse
@@ -290,6 +311,6 @@ TEST(PathPlannerTest, FindAStarPath_ConcavePerimeterNavigation)
     // Prüfe, ob alle Punkte innerhalb des Perimeters liegen
     for (const auto &p : path)
     {
-        EXPECT_TRUE(GeometryUtils::isPointInPolygon(p, env.getPerimeter()));
+        EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon(p, env.getPerimeter()));
     }
 }

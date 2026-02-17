@@ -143,7 +143,7 @@ TEST(GeometryUtilsTest, GetIntersectionLine_NoOverlap)
     EXPECT_FALSE(result);
 }
 
-// ******************GeometryUtils::isPointInPolygon*******************
+// ******************GeometryUtils::isPointCoveredByPolygon*******************
 
 // Hilfs-Polygon erstellen (Quadrat von 0,0 bis 10,10)
 Polygon createSquare()
@@ -157,44 +157,44 @@ Polygon createSquare()
 }
 
 // 1. Punkt klar innerhalb
-TEST(GeometryUtilsTest, IsPointInPolygon_Inside)
+TEST(GeometryUtilsTest, IsCoveredByPolygon_Inside)
 {
     Polygon poly = createSquare();
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({5, 5}, poly));
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({-5, -5}, poly));
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({5, -5}, poly));
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({-5, 5}, poly));
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({0, 0}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({5, 5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({-5, -5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({5, -5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({-5, 5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({0, 0}, poly));
 }
 
 // 2. Punkt klar außerhalb
-TEST(GeometryUtilsTest, IsPointInPolygon_Outside)
+TEST(GeometryUtilsTest, IsPointCoveredByPolygon_Outside)
 {
     Polygon poly = createSquare();
-    EXPECT_FALSE(GeometryUtils::isPointInPolygon({15, 5}, poly));
-    EXPECT_FALSE(GeometryUtils::isPointInPolygon({-15, 5}, poly));
-    EXPECT_FALSE(GeometryUtils::isPointInPolygon({5, 15}, poly));
-    EXPECT_FALSE(GeometryUtils::isPointInPolygon({5, -15}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointCoveredByPolygon({15, 5}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointCoveredByPolygon({-15, 5}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointCoveredByPolygon({5, 15}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointCoveredByPolygon({5, -15}, poly));
 }
 
 // 3. Punkt exakt auf der Kante (Anforderung: true)
-TEST(GeometryUtilsTest, IsPointInPolygon_OnEdge)
+TEST(GeometryUtilsTest, IsPointCoveredByPolygon_OnEdge)
 {
     Polygon poly = createSquare();
     // Punkt auf der unteren Kante
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({5, 0}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({10, 0}, poly));
 }
 
 // 4. Punkt exakt auf einem Eckpunkt (Anforderung: true)
-TEST(GeometryUtilsTest, IsPointInPolygon_OnVertex)
+TEST(GeometryUtilsTest, IsPointCoveredPolygon_OnVertex)
 {
     Polygon poly = createSquare();
     // Direkt auf der Ecke (10, 10)
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({10, 10}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({10, 10}, poly));
 }
 
 // 5. Test mit konkaven Polygon
-TEST(GeometryUtilsTest, IsPointInPolygon_Concave)
+TEST(GeometryUtilsTest, IsPointCoveredByPolygon_Concave)
 {
     // L-Form
     Polygon lShape;
@@ -206,12 +206,71 @@ TEST(GeometryUtilsTest, IsPointInPolygon_Concave)
     lShape.addPoint({0, 10});
 
     // Dieser Punkt (7, 7) liegt im "leeren Eck" des Ls, also AUSSERHALB
-    EXPECT_FALSE(GeometryUtils::isPointInPolygon({7, 7}, lShape));
+    EXPECT_FALSE(GeometryUtils::isPointCoveredByPolygon({7, 7}, lShape));
     // Dieser Punkt (2, 2) liegt INNERHALB
-    EXPECT_TRUE(GeometryUtils::isPointInPolygon({2, 2}, lShape));
+    EXPECT_TRUE(GeometryUtils::isPointCoveredByPolygon({2, 2}, lShape));
 }
 
-// 6. Test: kompletter durchschuss
+// ******************GeometryUtils::isPointInsidePolygon*******************
+
+// 1. Punkt klar innerhalb
+TEST(GeometryUtilsTest, IsPointInsidePolygon_Inside)
+{
+    Polygon poly = createSquare();
+    EXPECT_TRUE(GeometryUtils::isPointInsidePolygon({5, 5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInsidePolygon({-5, -5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInsidePolygon({5, -5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInsidePolygon({-5, 5}, poly));
+    EXPECT_TRUE(GeometryUtils::isPointInsidePolygon({0, 0}, poly));
+}
+
+// 2. Punkt klar außerhalb
+TEST(GeometryUtilsTest, IsPointInsidePolygon_Outside)
+{
+    Polygon poly = createSquare();
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({15, 5}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({-15, 5}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({5, 15}, poly));
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({5, -15}, poly));
+}
+
+// 3. Punkt exakt auf der Kante (Anforderung: true)
+TEST(GeometryUtilsTest, IsPointInsidePolygon_OnEdge)
+{
+    Polygon poly = createSquare();
+    // Punkt auf der unteren Kante
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({10, 0}, poly));
+}
+
+// 4. Punkt exakt auf einem Eckpunkt (Anforderung: true)
+TEST(GeometryUtilsTest, IsPointInsidePolygon_OnVertex)
+{
+    Polygon poly = createSquare();
+    // Direkt auf der Ecke (10, 10)
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({10, 10}, poly));
+}
+
+// 5. Test mit konkaven Polygon
+TEST(GeometryUtilsTest, IsPointInsidePolygon_Concave)
+{
+    // L-Form
+    Polygon lShape;
+    lShape.addPoint({0, 0});
+    lShape.addPoint({10, 0});
+    lShape.addPoint({10, 5});
+    lShape.addPoint({5, 5});
+    lShape.addPoint({5, 10});
+    lShape.addPoint({0, 10});
+
+    // Dieser Punkt (7, 7) liegt im "leeren Eck" des Ls, also AUSSERHALB
+    EXPECT_FALSE(GeometryUtils::isPointInsidePolygon({7, 7}, lShape));
+    // Dieser Punkt (2, 2) liegt INNERHALB
+    EXPECT_TRUE(GeometryUtils::isPointInsidePolygon({2, 2}, lShape));
+}
+
+// ******************GeometryUtils::isLineIntersectingPolygon***************
+
+// 1. Test: kompletter durchschuss
 TEST(GeometryUtilsTest, IsLineIntersectingPolygon_ThroughPass)
 {
     Polygon obstacle = createSquare();
@@ -225,7 +284,7 @@ TEST(GeometryUtilsTest, IsLineIntersectingPolygon_ThroughPass)
     EXPECT_FALSE(GeometryUtils::isLineIntersectingPolygon(p3, p4, obstacle));
 }
 
-// 7. Test: Glitching
+// 2. Test: Glitching
 TEST(GeometryUtilsTest, IsLineIntersectingPolygon_EdgeGliding)
 {
     Polygon obstacle = createSquare(); // 0,0 bis 10,10
@@ -239,53 +298,105 @@ TEST(GeometryUtilsTest, IsLineIntersectingPolygon_EdgeGliding)
 // ******************GeometryUtils::isLineCoverdByPolygon***************
 
 // Test 1: Line im Polygon
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInside)
+TEST(GeometryUtilsTest, IsLineCoveredByPolygon_LineInside)
 {
     Polygon polygon = createSquare();
     Point a = {-5.0, -5.0};
     Point b = {5.0, 5.0};
 
-    EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+    EXPECT_TRUE(GeometryUtils::isLineCoveredByPolygon(a, b, polygon));
 }
 
 // Test 2: Line im Polygon, aber berührt die Kante
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchEdge)
+TEST(GeometryUtilsTest, IsLineCoveredByPolygon_LineInsideTouchEdge)
 {
     Polygon polygon = createSquare();
     Point a = {-5.0, -10.0};
     Point b = {5.0, 5.0};
 
-    EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+    EXPECT_TRUE(GeometryUtils::isLineCoveredByPolygon(a, b, polygon));
 }
 
 // Test 3: Line im Polygon, aber berührt die Polygonkoordinate
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineInsideTouchCoord)
+TEST(GeometryUtilsTest, IsLineCoveredByPolygon_LineInsideTouchCoord)
 {
     Polygon polygon = createSquare();
     Point a = {-10.0, -10.0};
     Point b = {5.0, 5.0};
 
-    EXPECT_TRUE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+    EXPECT_TRUE(GeometryUtils::isLineCoveredByPolygon(a, b, polygon));
 }
 
 // Test 4: Line außerhalb vom Polygon
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineOutside)
+TEST(GeometryUtilsTest, IsLineCoveredByPolygon_LineOutside)
 {
     Polygon polygon = createSquare();
     Point a = {-50.0, -50.0};
     Point b = {50.0, -50.0};
 
-    EXPECT_FALSE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+    EXPECT_FALSE(GeometryUtils::isLineCoveredByPolygon(a, b, polygon));
 }
 
 // Test 5: Line kruezt Polygon
-TEST(GeometryUtilsTest, IsLineCoverdByPolygon_LineCross)
+TEST(GeometryUtilsTest, IsLineCoveredByPolygon_LineCross)
 {
     Polygon polygon = createSquare();
     Point a = {-50.0, -50.0};
     Point b = {50.0, 50.0};
 
-    EXPECT_FALSE(GeometryUtils::isLineCoverdByPolygon(a, b, polygon));
+    EXPECT_FALSE(GeometryUtils::isLineCoveredByPolygon(a, b, polygon));
+}
+
+// ******************GeometryUtils::isLineInsidePolygon***************
+
+// Test 1: Line im Polygon
+TEST(GeometryUtilsTest, IsLineInsidePolygon_LineInside)
+{
+    Polygon polygon = createSquare();
+    Point a = {-5.0, -5.0};
+    Point b = {5.0, 5.0};
+
+    EXPECT_TRUE(GeometryUtils::isLineInsidePolygon(a, b, polygon));
+}
+
+// Test 2: Line im Polygon, aber berührt die Kante
+TEST(GeometryUtilsTest, IsLineInsidePolygon_LineInsideTouchEdge)
+{
+    Polygon polygon = createSquare();
+    Point a = {-5.0, -10.0};
+    Point b = {5.0, 5.0};
+
+    EXPECT_FALSE(GeometryUtils::isLineInsidePolygon(a, b, polygon));
+}
+
+// Test 3: Line im Polygon, aber berührt die Polygonkoordinate
+TEST(GeometryUtilsTest, IsLineInsidePolygon_LineInsideTouchCoord)
+{
+    Polygon polygon = createSquare();
+    Point a = {-10.0, -10.0};
+    Point b = {5.0, 5.0};
+
+    EXPECT_FALSE(GeometryUtils::isLineInsidePolygon(a, b, polygon));
+}
+
+// Test 4: Line außerhalb vom Polygon
+TEST(GeometryUtilsTest, IsLineInsidePolygon_LineOutside)
+{
+    Polygon polygon = createSquare();
+    Point a = {-50.0, -50.0};
+    Point b = {50.0, -50.0};
+
+    EXPECT_FALSE(GeometryUtils::isLineInsidePolygon(a, b, polygon));
+}
+
+// Test 5: Line kruezt Polygon
+TEST(GeometryUtilsTest, IsLineInsidePolygon_LineCross)
+{
+    Polygon polygon = createSquare();
+    Point a = {-50.0, -50.0};
+    Point b = {50.0, 50.0};
+
+    EXPECT_FALSE(GeometryUtils::isLineInsidePolygon(a, b, polygon));
 }
 
 // ******************GeometryUtils::calculateDistance*******************

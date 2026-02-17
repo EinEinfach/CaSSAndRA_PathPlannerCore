@@ -40,7 +40,7 @@ namespace Planner
                 }
                 // Prüfe Berührungen
                 if (GeometryUtils::getTouchPoint(perimeterPoints[i],
-                                                        perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
+                                                 perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
                 {
                     x_intersections.push_back(intersect.x);
                 }
@@ -71,7 +71,7 @@ namespace Planner
                     }
                     // Prüfe Berührungen
                     if (GeometryUtils::getTouchPoint(obsPts[i],
-                                                            obsPts[(i + 1) % obsPts.size()], c, d, intersect))
+                                                     obsPts[(i + 1) % obsPts.size()], c, d, intersect))
                     {
                         x_intersections.push_back(intersect.x);
                     }
@@ -106,13 +106,13 @@ namespace Planner
                 Point midPoint = {(xStart + xEnd) / 2.0, y};
 
                 // Ist die Mitte im Perimeter?
-                bool inPerimeter = GeometryUtils::isPointInPolygon(midPoint, env.getPerimeter());
+                bool inPerimeter = GeometryUtils::isPointCoveredByPolygon(midPoint, env.getPerimeter());
 
                 // Ist die Mitte in IRGENDEINEM Hindernis?
                 bool inObstacle = false;
                 for (const auto &obs : env.getObstacles())
                 {
-                    if (GeometryUtils::isPointInPolygon(midPoint, obs))
+                    if (GeometryUtils::isPointCoveredByPolygon(midPoint, obs))
                     {
                         inObstacle = true;
                         break;
@@ -204,7 +204,7 @@ namespace Planner
 
         // Prüfe ob innerhalb des Perimeters
         auto &perimeter = env.getPerimeter();
-        if (!GeometryUtils::isLineCoverdByPolygon(a, b, perimeter))
+        if (!GeometryUtils::isLineCoveredByPolygon(a, b, perimeter))
         {
             return false;
         }
@@ -212,13 +212,18 @@ namespace Planner
         // Prüfe Hindernisse
         for (const auto &obs : env.getObstacles())
         {
-            // Wird Hindernis durchquert
+            // 1. Wird die Kante echt geschnitten? (Der "Durchschuss")
             if (GeometryUtils::isLineIntersectingPolygon(a, b, obs))
             {
                 return false;
             }
-            // Liegt der Weg innerhalb des Hindernisses
-            if (GeometryUtils::isLineCoverdByPolygon(a, b, obs))
+            // 2. Liegt die Linie im Inneren?
+            // Wir prüfen den Mittelpunkt mit der "strikten" Inside-Methode.
+            // Wenn der Mittelpunkt STRIKT drin ist, ist die Linie im Hindernis.
+            // Wenn der Mittelpunkt auf der Kante liegt, gibt isPointInsidePolygon FALSE,
+            // und der Weg wird (korrekterweise) als frei betrachtet.
+            Point mid = {(a.x + b.x) / 2.0, (a.y + b.y) / 2.0};
+            if (GeometryUtils::isPointInsidePolygon(mid, obs))
             {
                 return false;
             }

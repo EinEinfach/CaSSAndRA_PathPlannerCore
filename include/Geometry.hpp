@@ -49,8 +49,11 @@ namespace Planner
         // Prüft ob zwei Lineinsegmenten aufeinander liegen und wenn ja gibt es eine kolineare Linie zurück
         static bool getIntersectionLine(Point a, Point b, Point c, Point d, LineString &outline);
 
-        // Prüft ob der Punkt innerhalb des Polygons liegt
-        static bool isPointInPolygon(Point p, const Polygon &poly);
+        // Prüft ob der Punkt innerhalb des Polygons liegt (inkl Kanten)
+        static bool isPointCoveredByPolygon(Point p, const Polygon &poly);
+
+        // Prüft ob der Punkt innerhalb des Polygons liegt (ohne Kanten)
+        static bool isPointInsidePolygon(Point p, const Polygon &poly);
 
         // Rotiert einen Punkt um den Ursprung
         static Point rotatePoint(Point p, double angleRad);
@@ -61,8 +64,11 @@ namespace Planner
         // Prüft ob die Linie einen Polygon schneidet
         static bool isLineIntersectingPolygon(Point p1, Point p2, const Polygon &poly);
 
-        // Prüft ob die Linie komplet im Polygon
-        static bool isLineCoverdByPolygon(Point p1, Point p2, const Polygon &poly);
+        // Prüft ob die Linie komplet im Polygon (inkl Kanten)
+        static bool isLineCoveredByPolygon(Point p1, Point p2, const Polygon &poly);
+
+        // Prüft ob die Linie komplet im Polygon (ohne Kante)
+        static bool isLineInsidePolygon(Point p1, Point p2, const Polygon &poly);
 
         // Berechne Distanz zwischen zwei Punkten
         static double calculateDistance(Point a, Point b);

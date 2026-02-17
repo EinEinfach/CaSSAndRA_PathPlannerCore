@@ -16,7 +16,7 @@ int main() {
 
     Point startPos = {0.0, 0.0};
     double offset = 1.0;
-    double angle = 0.0;
+    double angle = -0.6;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0},  {0.0, 10.0}};
@@ -31,7 +31,7 @@ int main() {
     Polygon obstacle3 = {{2.0, 2.0}, {4.0, 2.0}, {4.0, 4.0}, {2.0, 4.0}};
     myEnv2.addObstacle(obstacle3);
 
-    auto myEnv = myEnv2;
+    auto myEnv = myEnv1;
 
     LineString vWire = {{0.0, 9.5}, {20.0, 9.5}};
     myEnv.setVirtualWire(vWire);
@@ -39,21 +39,21 @@ int main() {
     LineString dWire = {{2.0, 2.0}, {1.0, 1.0}, {0.0, 0.0}};
     myEnv.setVirtualWire(dWire);
     std::cout << "Drehe die Environment..." << std::endl;
-    myEnv.rotate(angle);
+    myEnv.rotate(-angle);
 
     std::cout << "Generiere Slice..." << std::endl;
     auto slices = PathPlanner::generateSlices(myEnv, offset);
     std::cout << "Verbnde Slice..." << std::endl;
     auto result = PathPlanner::connectSlices(myEnv, slices, startPos);
     std::cout << "Drehe die Environment zurück..." << std::endl;
-    myEnv.rotate(-angle);
-    result.path.rotate(-angle);
+    myEnv.rotate(angle);
+    result.path.rotate(angle);
     // Für Visualization
     for (auto& l : result.debugLines) {
-        l.rotate(-angle);
+        l.rotate(angle);
     }
     for (auto& l : slices) {
-        l.rotate(-angle);
+        l.rotate(angle);
     }
     std::cout << "Schreibe das Ergbnis in ein SVG Format..." << std::endl;
     Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, slices); 

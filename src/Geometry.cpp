@@ -187,7 +187,7 @@ namespace Planner
         return false;
     }
 
-    bool GeometryUtils::isPointInPolygon(Point p, const Polygon &poly)
+    bool GeometryUtils::isPointCoveredByPolygon(Point p, const Polygon &poly)
     {
         const auto &pts = poly.getPoints();
         size_t numPoints = pts.size();
@@ -225,6 +225,43 @@ namespace Planner
         return inside;
     }
 
+    bool GeometryUtils::isPointInsidePolygon(Point p, const Polygon &poly)
+    {
+        const auto &pts = poly.getPoints();
+        size_t numPoints = pts.size();
+        if (numPoints < 3)
+            return false;
+
+        bool inside = false;
+        for (size_t i = 0; i < numPoints; i++)
+        {
+            size_t j = (i == 0) ? numPoints - 1 : i - 1;
+            const Point &A = pts[i];
+            const Point &B = pts[j];
+
+            // 1. CHECK: Liegt der Punkt exakt auf der Kante oder einem Eckpunkt?
+            // Gemäß Anforderung: Falls ja, sofort FALSE zurückgeben.
+            double crossProduct = (p.y - A.y) * (B.x - A.x) - (p.x - A.x) * (B.y - A.y);
+            if (std::abs(crossProduct) < 1e-9)
+            {
+                if (p.x >= std::min(A.x, B.x) - 1e-9 && p.x <= std::max(A.x, B.x) + 1e-9 &&
+                    p.y >= std::min(A.y, B.y) - 1e-9 && p.y <= std::max(A.y, B.y) + 1e-9)
+                {
+                    return false; // Punkt liegt auf Kante oder Ecke -> Ausschluss
+                }
+            }
+
+            // 2. Standard Raycasting
+            // Wir prüfen, ob ein horizontaler Strahl von p nach rechts die Kante AB schneidet.
+            if (((A.y > p.y) != (B.y > p.y)) &&
+                (p.x < (B.x - A.x) * (p.y - A.y) / (B.y - A.y) + A.x))
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
     double GeometryUtils::degToRad(double deg)
     {
         return deg * M_PI / 180;
@@ -269,7 +306,7 @@ namespace Planner
         return false;
     }
 
-    bool GeometryUtils::isLineCoverdByPolygon(Point p1, Point p2, const Polygon &poly)
+    bool GeometryUtils::isLineCoveredByPolygon(Point p1, Point p2, const Polygon &poly)
     {
         const auto &pts = poly.getPoints();
         size_t numPoints = pts.size();
@@ -277,16 +314,16 @@ namespace Planner
             return false;
 
         // 1. Endpunkte prüfen
-        // Da isPointInPolygon bei uns "true" für Kanten/Ecken liefert,
+        // Da isPointCoveredByPolygon bei uns "true" für Kanten/Ecken liefert,
         // ist Bedingung 3 (Berühren erlaubt) hier bereits abgedeckt.
-        if (!isPointInPolygon(p1, poly) || !isPointInPolygon(p2, poly))
+        if (!isPointCoveredByPolygon(p1, poly) || !isPointCoveredByPolygon(p2, poly))
         {
             return false;
         }
 
         // 2. Mittelpunkt-Check (Grobauswahl)
         Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
-        if (!isPointInPolygon(midPoint, poly))
+        if (!isPointCoveredByPolygon(midPoint, poly))
         {
             return false; // Liegt bei konkaven Polygonen "im Freien"
         }
@@ -329,6 +366,60 @@ namespace Planner
         // Das bedeutet: Die Linie ist entweder komplett IM Polygon oder auf der Kante.
         // Beides soll laut deiner Anforderung TRUE liefern.
         return true;
+    }
+
+    bool GeometryUtils::isLineInsidePolygon(Point p1, Point p2, const Polygon &poly)
+    {
+        const auto &pts = poly.getPoints();
+        size_t numPoints = pts.size();
+        if (numPoints < 3)
+            return false;
+
+        // 1. Endpunkte prüfen: Müssen strikt INSIDE sein
+        if (!isPointInsidePolygon(p1, poly) || !isPointInsidePolygon(p2, poly))
+        {
+            return false;
+        }
+
+        // 2. Mittelpunkt-Check: Muss strikt INSIDE sein
+        Point midPoint = {(p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0};
+        if (!isPointInsidePolygon(midPoint, poly))
+        {
+            return false;
+        }
+
+        // 3. Jegliche Interaktion mit Kanten prüfen
+        for (size_t i = 0; i < numPoints; ++i)
+        {
+            Point A = pts[i];
+            Point B = pts[(i + 1) % numPoints];
+            Point intersect;
+
+            // A) Echter Durchschuss?
+            if (getIntersectionPoint(p1, p2, A, B, intersect))
+            {
+                return false;
+            }
+
+            // B) Berührung einer Kante von innen? (Touch)
+            // Auch wenn die Endpunkte "Inside" sind, könnte die Linie
+            // eine Kante tangential von innen berühren.
+            if (getTouchPoint(p1, p2, A, B, intersect))
+            {
+                return false;
+            }
+
+            // C) Überlappung mit einer Kante?
+            // (Eigentlich durch isPointInside für p1/p2 bereits abgefangen,
+            // aber zur Sicherheit für totale Robustheit):
+            LineString overlap;
+            if (getIntersectionLine(p1, p2, A, B, overlap))
+            {
+                return false;
+            }
+        }
+
+        return true; // Die Linie schwebt völlig frei im Inneren des Polygons
     }
 
     double GeometryUtils::calculateDistance(Point a, Point b)
