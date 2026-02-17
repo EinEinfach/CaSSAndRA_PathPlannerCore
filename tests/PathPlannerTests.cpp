@@ -245,8 +245,9 @@ TEST(PathPlannerTest, FindAStarPath_PathStraight)
     PathPlanner planner;
     Point start = {0.0, 0.0};
     Point goal = {1.0, 0.0};
+    std::vector<LineString> debugLines;
 
-    auto path = planner.findAStarPath(start, goal, env);
+    auto path = planner.findAStarPath(start, goal, env, debugLines);
 
     ASSERT_GE(path.size(), 2UL);
     EXPECT_NEAR(path.front().x, 0.0, 1e-3);
@@ -260,8 +261,9 @@ TEST(PathPlannerTest, FindAStarPath_PathAroundObstacle)
     PathPlanner planner;
     Point start = {1.0, 3.0}; // Links vom Hindernis
     Point goal = {5.0, 3.0};  // Rechts vom Hindernis
+    std::vector<LineString> debugLines;
 
-    auto path = planner.findAStarPath(start, goal, env);
+    auto path = planner.findAStarPath(start, goal, env, debugLines);
 
     ASSERT_GT(path.size(), 2UL); // Muss mindestens einen Zwischenpunkt haben
     for (const auto &p : path)
@@ -280,8 +282,9 @@ TEST(PathPlannerTest, FindAStarPath_NoPathPossible)
     PathPlanner planner;
     Point start = {0.0, 0.0};
     Point goal = {20.0, 20.0}; // goal outside of perimeter
+    std::vector<LineString> debugLines;
 
-    auto path = planner.findAStarPath(start, goal, env);
+    auto path = planner.findAStarPath(start, goal, env, debugLines);
 
     EXPECT_TRUE(path.empty()); // Erwartung: Leerer Vektor
 }
@@ -292,8 +295,9 @@ TEST(PathPlannerTest, FindAStarPath_StartEqualsGoal)
     Environment env = getEnv();
     PathPlanner planner;
     Point start = {1.0, 1.0};
+    std::vector<LineString> debugLines;
 
-    auto path = planner.findAStarPath(start, start, env);
+    auto path = planner.findAStarPath(start, start, env, debugLines);
 
     ASSERT_EQ(path.size(), 1UL);
     EXPECT_NEAR(path[0].x, 1.0, 1e-3);
@@ -307,8 +311,9 @@ TEST(PathPlannerTest, FindAStarPath_ConcavePerimeterNavigation)
     // Start im oberen Arm des U, Ziel im unteren Arm
     Point start = {-4.0, 4.0};
     Point goal = {-4.0, -4.0};
+    std::vector<LineString> debugLines;
 
-    auto path = planner.findAStarPath(start, goal, env);
+    auto path = planner.findAStarPath(start, goal, env, debugLines);
 
     ASSERT_GT(path.size(), 2UL);
     // Prüfe, ob alle Punkte innerhalb des Perimeters liegen
@@ -343,8 +348,9 @@ TEST(PathPlannerTest, FindAStarPath_VirtualWireNavigation)
     // Start und Ziel liegen auf y=0
     Point start{2, 0};
     Point goal{18, 0};
+    std::vector<LineString> debugLines;
 
-    auto path = PathPlanner::findAStarPath(start, goal, env);
+    auto path = PathPlanner::findAStarPath(start, goal, env, debugLines);
 
     // PRÜFUNGEN:
     ASSERT_FALSE(path.empty()) << "A* sollte einen Weg über den Draht finden, da dieser das Hindernis ignoriert.";

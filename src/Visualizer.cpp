@@ -4,7 +4,7 @@
 
 namespace Planner
 {
-    void Visualizer::exportToSVG(const std::string &filename, const Environment &env, const LineString &path, const std::vector<LineString> &debugLines, const std::vector<LineString> &originalSlices)
+    void Visualizer::exportToSVG(const std::string &filename, const Environment &env, const LineString &path, const std::vector<LineString> &debugLines, const std::vector<LineString> &debugLinesSec, const std::vector<LineString> &originalSlices)
     {
         std::ofstream file(filename);
         if (!file.is_open())
@@ -100,6 +100,18 @@ namespace Planner
                 file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
                      << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
                      << "\" stroke=\"red\" stroke-width=\"2.5\" stroke-dasharray=\"5,5\" />\n";
+            }
+        }
+
+        // Debug-Lines (AStar Wege die betracttet worden)
+        for (const auto &line : debugLinesSec)
+        {
+            const auto &pts = line.getPoints();
+            if (pts.size() >= 2)
+            {
+                file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
+                     << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
+                     << "\" stroke=\"grey\" stroke-width=\"1.0\" stroke-dasharray=\"5,5\" />\n";
             }
         }
 

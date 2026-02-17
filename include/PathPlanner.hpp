@@ -7,10 +7,12 @@ namespace Planner
     class PathPlanner
     {
     public:
+        static bool enableDebugLogs;
         struct PlanningResult
         {
             LineString path;
             std::vector<LineString> debugLines;
+            std::vector<LineString> debugLinesSec;
         };
 
         struct NavNode
@@ -59,7 +61,7 @@ namespace Planner
         static Movement checkMovementRules(const AStarNode &current, const NavNode &next, const Environment &env);
         static std::vector<Point> reconstructPath(const AStarNode &goalNode, const std::vector<AStarNode> &closedList);
         static void updateOpenList(const AStarNode &current, const NavNode &nextNav, double costMultiplier, Point goal, int currentInClosedIdx, std::vector<AStarNode> &opneList, const std::vector<AStarNode> &closedList);
-        static std::vector<Point> findAStarPath(Point start, Point goal, const Environment &env);
+        static std::vector<Point> findAStarPath(Point start, Point goal, const Environment &env, std::vector<LineString>& debugLines);
         static std::vector<Point> smoothPath(const std::vector<Point>& path, const Environment& env);
     };
 }

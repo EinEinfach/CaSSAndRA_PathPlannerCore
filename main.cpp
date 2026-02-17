@@ -25,7 +25,7 @@ int main() {
     Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
     myEnv1.addObstacle(obstacle1);
     myEnv1.addObstacle(obstacle2);
-    LineString virtualWire = {{2.0, 10.0}, {18.0, 14.0}, {18.0, 26.0}};
+    LineString virtualWire = {{9.0, 10.0}, {18.0, 14.0}, {18.0, 26.0}};
     myEnv1.setVirtualWire(virtualWire);
 
     Polygon perimeter2 = {{-5.0, -5.0}, {-5.0, -3.0}, {-3.0, -3.0}, {-3.0, 3.0}, {-5.0, 3.0}, {-5.0, 5.0}, {5.0, 5.0}, {5.0, -5.0}};
@@ -49,11 +49,14 @@ int main() {
     for (auto& l : result.debugLines) {
         l.rotate(angle);
     }
+    for (auto& l: result.debugLinesSec) {
+        l.rotate(angle);
+    }
     for (auto& l : slices) {
         l.rotate(angle);
     }
     std::cout << "Schreibe das Ergbnis in ein SVG Format..." << std::endl;
-    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, slices); 
+    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, {}, slices); 
 
     std::cout << "Setup erfolgreich!" << std::endl;
 }

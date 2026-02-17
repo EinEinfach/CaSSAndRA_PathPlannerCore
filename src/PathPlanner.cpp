@@ -3,9 +3,20 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 
 namespace Planner
 {
+    bool PathPlanner::enableDebugLogs = true;
+
+    void logDebug(const std::string &message)
+    {
+        if (PathPlanner::enableDebugLogs)
+        {
+            std::cout << "PathPlanner: " << message << std::endl;
+        }
+    }
+
     std::vector<LineString> PathPlanner::generateSlices(const Environment &env, double spacing)
     {
         std::vector<LineString> result;
@@ -145,7 +156,10 @@ namespace Planner
         for (size_t count = 0; count < slices.size(); ++count)
         {
             // 1. Finde das nächste erreichbare Segment ausgehend von currentPos
-            std::cout << "--- Bin bei Pos (" << currentPos.x << "|" << currentPos.y << ") ---" << std::endl;
+            std::stringstream ss;
+            ss << "--- Bin bei Pos (" << currentPos.x << "|" << currentPos.y << ") ---";
+            logDebug(ss.str());
+
             BestNextSegment next = findBestNext(currentPos, slices, visited, env);
 
             // 2.1 Weg ohne Umwege möglich
@@ -162,16 +176,16 @@ namespace Planner
                 {
                     Point goal = next.reverse ? slices[next.index].getPoints().back() : slices[next.index].getPoints().front();
 
-                    // --- DEBUG LINE START ---
+                    // DEBUG
                     // Hier loggen wir die Linie, die findBestNext als "nicht frei" abgelehnt hat
                     LineString failLine;
                     failLine.addPoint(currentPos);
                     failLine.addPoint(goal);
                     result.debugLines.push_back(failLine);
-                    // --- DEBUG LINE END ---
+                    // END DEBUG
 
                     // Berechne Umweg um Hindernisse
-                    std::vector<Point> bypass = findAStarPath(currentPos, goal, env);
+                    std::vector<Point> bypass = findAStarPath(currentPos, goal, env, result.debugLinesSec);
 
                     for (size_t i = 1; i < bypass.size(); ++i)
                     {
@@ -282,8 +296,10 @@ namespace Planner
         }
         if (best.index != -1)
         {
-            std::cout << "Entscheidung: Gehe zu Slice #" << best.index
-                      << " (Dist: " << best.distance << ", Reverse: " << (best.reverse ? "Ja" : "Nein") << ")" << std::endl;
+            std::stringstream ss;
+            ss << "Entscheidung: Gehe zu Slice #" << best.index
+               << " (Dist: " << best.distance << ", Reverse: " << (best.reverse ? "Ja" : "Nein") << ")";
+            logDebug(ss.str());
         }
         return best;
     }
@@ -380,7 +396,7 @@ namespace Planner
         4. Die Bewegung innerhalb des virtual Wires ignoriert den isPathClear Bedingung
     */
 
-    std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env)
+    std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env, std::vector<LineString> &debugLines)
     {
         auto navNodes = prepareNavigationGraph(goal, env);
 
@@ -412,9 +428,26 @@ namespace Planner
                     continue;
 
                 Movement move = checkMovementRules(current, nextNav, env);
+                // DEBUG
+                if (nextNav.isWire)
+                {
+                    std::stringstream ss;
+                    ss << "[Debug] Draht-Check: Von (" << current.pos.x << "," << current.pos.y
+                       << ") nach Draht-Index " << nextNav.wireIdx
+                       << " | Erlaubt: " << (move.allowed ? "JA" : "NEIN")
+                       << " | Multiplier: " << move.costMultiplier;
+                    logDebug(ss.str());
+                }
+                // END DEBUG
 
                 if (move.allowed)
                 {
+                    // DEBUG
+                    LineString edge;
+                    edge.addPoint(current.pos);
+                    edge.addPoint(nextNav.pos);
+                    debugLines.push_back(edge);
+                    // END DEBUG
                     updateOpenList(current, nextNav, move.costMultiplier, goal, currentInClosedIdx, openList, closedList);
                 }
             }
@@ -484,6 +517,21 @@ namespace Planner
     {
         double dist = GeometryUtils::calculateDistance(current.pos, nextNav.pos);
         double newGCost = current.gCost + (dist * costMultiplier);
+        double hCost = GeometryUtils::calculateDistance(nextNav.pos, goal);
+
+        // Wenn es ein Drahtpunkt ist, geben wir einen "Motivations-Bonus" 
+        // auf die Heuristik, damit der f-Wert sinkt.
+        if (nextNav.isWire)
+        {
+            hCost *= 0.65;
+            double fCost = newGCost + hCost;
+            std::stringstream ss;
+            ss << "   [A* Update] Draht-Punkt " << nextNav.wireIdx
+               << " | g:" << newGCost << " (+" << (dist * costMultiplier) << ")"
+               << " | h:" << hCost
+               << " | f_TOTAL:" << fCost;
+            logDebug(ss.str());
+        }
 
         // Schon final besucht?
         for (const auto &cNode : closedList)
@@ -500,6 +548,7 @@ namespace Planner
                 if (newGCost < oNode.gCost)
                 {
                     oNode.gCost = newGCost;
+                    oNode.hCost = hCost;
                     oNode.parentIdx = currentInClosedIdx;
                 }
                 return;
@@ -509,7 +558,7 @@ namespace Planner
         // Ganz neuer Punkt!
         openList.push_back({nextNav.pos,
                             newGCost,
-                            GeometryUtils::calculateDistance(nextNav.pos, goal),
+                            hCost,
                             currentInClosedIdx,
                             nextNav.isWire,
                             nextNav.wireIdx});
