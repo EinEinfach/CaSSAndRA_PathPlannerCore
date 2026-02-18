@@ -33,6 +33,10 @@ namespace Planner
     {
     public:
         using LineString::LineString;
+        Polygon(const std::vector<Point> &pts)
+        {
+            this->points = pts;
+        }
         bool isClosed() const;
     };
 

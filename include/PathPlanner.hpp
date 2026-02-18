@@ -27,6 +27,7 @@ namespace Planner
         struct PlanningResult
         {
             LineString path;
+            std::vector<LineString> slices;
             std::vector<LineString> debugLines;
             std::vector<LineString> debugLinesSec;
         };

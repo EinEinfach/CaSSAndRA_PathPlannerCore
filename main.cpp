@@ -1,4 +1,5 @@
 #include <iostream>
+#include "PathService.hpp"
 #include "Environment.hpp"
 #include "Geometry.hpp"
 #include "PathPlanner.hpp"
@@ -16,17 +17,19 @@ int main()
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
     Point startPos = {0.0, 0.0};
-    std::string pattern = "lines";
-    double offset = 0.5;
-    double angle = 1.5;
-    size_t distanceToBorder = 0;
-    bool mowArea = true;
-    bool mowBorder = true;
-    //bool mowBorderCcw = false;
-    size_t borderLaps = 1;
-    bool mowExclusionsBorder = true;
-    //bool mowExclusionBorderCcw = false;
-    size_t exclusionBorderLaps = 2;
+
+    Planner::PathSettings settings;
+    settings.pattern = "squares";
+    settings.offset = 0.2;
+    settings.angle = 0.5;
+    settings.distanceToBorder = 0.0;
+    settings.mowArea = true;
+    settings.mowBorder = true;
+    settings.mowBorderCcw = false;
+    settings.borderLaps = 0;
+    settings.mowExclusionsBoder = true;
+    settings.mowExclusionsBorderCcw= false;
+    settings.exclusionsBorderLaps = 0;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0}, {0.0, 10.0}};
@@ -39,74 +42,18 @@ int main()
     myEnv1.setVirtualWire(virtualWire);
 
     Polygon perimeter2 = {{-5.0, -5.0}, {-5.0, -3.0}, {-3.0, -3.0}, {-3.0, 3.0}, {-5.0, 3.0}, {-5.0, 5.0}, {5.0, 5.0}, {5.0, -5.0}};
-    auto myEnv2 = Environment(perimeter2);
+    auto myEnv2 = Environment{perimeter2};
     Polygon obstacle3 = {{2.0, 2.0}, {4.0, 2.0}, {4.0, 4.0}, {2.0, 4.0}};
     myEnv2.addObstacle(obstacle3);
 
     auto myEnv = myEnv1;
 
-    std::cout << "Drehe die Environment. Winkel: " << angle << std::endl;
-    myEnv.rotate(-angle);
+    Planner::PathService service;
+    std::cout << "Starte PathService..." << std::endl;
+    auto result = service.computeFullTask(myEnv, settings, startPos);
 
-    std::vector<LineString> slices;
-
-    if (mowArea)
-    {
-        std::cout << "Generiere Slices. Muster: " << pattern << " Abstand: " << offset << std::endl;
-        if (pattern.compare("lines") == 0) {
-            slices = PathPlanner::generateSlices(myEnv, offset);
-        } else {
-            slices = PathPlanner::generateRingSlices(myEnv, offset);
-        }
-    }
-
-    if (mowBorder && borderLaps > 0)
-    {
-        std::cout << "Generiere Border Slices. Anzahl Runden: " << borderLaps << std::endl;
-        slices.push_back(myEnv.getPerimeter());
-        if (borderLaps > 1) {
-            auto borderSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(myEnv, offset, borderLaps - 1), false);
-            for (auto& s : borderSlices) {
-                slices.push_back(s);
-            }
-        }
-    }
-
-    if (mowExclusionsBorder && exclusionBorderLaps > 0)
-    {
-        std::cout << "Generieren Exclusions Slices. Anzahl Runden: " << exclusionBorderLaps << std::endl;
-        for (auto &obs : myEnv.getObstacles())
-        {
-            slices.push_back(obs);
-        }
-        if (exclusionBorderLaps > 1) {
-            auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(myEnv, offset, exclusionBorderLaps - 1), true);
-            for (auto& s : exclusionsSlices) {
-                slices.push_back(s);
-            }
-        }
-    }
-
-    std::cout << "Verbnde Slices..." << std::endl;
-    auto result = PathPlanner::connectSlices(myEnv, slices, startPos);
-    std::cout << "Drehe die Environment zurück..." << std::endl;
-    myEnv.rotate(angle);
-    result.path.rotate(angle);
-    // Für Visualization
-    for (auto &l : result.debugLines)
-    {
-        l.rotate(angle);
-    }
-    for (auto &l : result.debugLinesSec)
-    {
-        l.rotate(angle);
-    }
-    for (auto &l : slices)
-    {
-        l.rotate(angle);
-    }
     std::cout << "Schreibe das Ergbnis in ein SVG Format..." << std::endl;
-    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, {}, slices);
+    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, {}, result.slices);
 
     std::cout << "Setup erfolgreich!" << std::endl;
 }
