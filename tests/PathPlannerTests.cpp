@@ -522,7 +522,7 @@ TEST(PathPlannerTest, FindAStarPath_PathSmoothingRespectsObstacles)
 //     EXPECT_GE(slices.size(), 1UL);
 // }
 
-// --- TEST 2: HINDERNIS-CHECK ---
+// --- TEST 2: Hindernis ---
 // Ein Donut-Szenario. Ringe dürfen niemals in das Hindernis eindringen.
 TEST(PathPlannerTest, GenerateRingSlices_RingsShouldNotIntersectObstacles)
 {
@@ -536,15 +536,16 @@ TEST(PathPlannerTest, GenerateRingSlices_RingsShouldNotIntersectObstacles)
     {
         for (const auto &pt : slice.getPoints())
         {
-            for (const auto &obs : env.getObstacles()) {
+            for (const auto &obs : env.getObstacles())
+            {
                 EXPECT_FALSE(GeometryUtils::isPointInsidePolygon(pt, obs))
-                << "Pfadpunkt (" << pt.x << ", " << pt.y << ") liegt innerhalb eines Hindernisses!";
+                    << "Pfadpunkt (" << pt.x << ", " << pt.y << ") liegt innerhalb eines Hindernisses!";
             }
         }
     }
 }
 
-// --- TEST 3: ZERFALL (ISLANDS) ---
+// --- TEST 3: Zerfall ---
 // Eine Hantel-Form. Wenn der Steg in der Mitte weggeschmolzen ist,
 // müssen die zwei verbleibenden Inseln unabhängig weiter existieren.
 TEST(PathPlannerTest, GenerateRingSlices_MultiIslandDecomposition)
@@ -577,10 +578,73 @@ TEST(PathPlannerTest, GenerateRingSlices_MultiIslandDecomposition)
     EXPECT_GT(slices.size(), 1UL);
 }
 
-// --- TEST 4: LEERES ENVIRONMENT ---
+// --- TEST 4: Leere Umgebung ---
 TEST(PathPlannerTest, GenerateRingSlices_EmptyEnvironmentReturnsEmptySlices)
 {
     Environment env = {{}}; // Kein Perimeter gesetzt
     auto slices = PathPlanner::generateRingSlices(env, 1.0);
     EXPECT_TRUE(slices.empty());
+}
+
+// --- TEST 5: Eine limitirte Anzahl an Ringen
+TEST(PathPlannerTest, GenerateRingSlices_LimitToTwoRings)
+{
+    Environment env = Environment({{0, 0}, {20, 0}, {20, 20}, {0, 20}});
+
+    // Wir wollen nur exakt 2 Runden
+    auto slices = PathPlanner::generateRingSlices(env, 1.0, 2);
+
+    // Da es ein einfaches Quadrat ohne Inseln ist, erwarten wir genau 2 Ringe
+    EXPECT_EQ(slices.size(), 2UL);
+}
+
+// ******************PathPlanner::filterRIngs*******************
+
+// TEST 1: Nur Perimeter (CCW) filtern
+TEST(PathPlannerTest, FilterRings_ShouldOnlyReturnPerimeterRings) {
+    std::vector<LineString> rings;
+    rings.push_back({{0, 0}, {0, 1}, {-1, 1}, {-1, 0}});  // Perimeter
+    rings.push_back({{0, 0}, {0, 1}, {1, 1}, {1, 0}});  // Obstacle
+    rings.push_back({{1, 1}, {1, 2}, {2, 2}, {2, 1}});  // Obstacle
+
+    // filterForObstacle = false -> wir wollen nur Perimeter
+    auto result = PathPlanner::filterRings(rings, false);
+
+    ASSERT_EQ(result.size(), 1UL);
+    // Verifizierung über die Punkte (CCW Pfad hat y=0 bei x=10)
+    EXPECT_DOUBLE_EQ(result[0].getPoints()[1].x, 0.0);
+    EXPECT_DOUBLE_EQ(result[0].getPoints()[1].y, 1.0);
+}
+
+// TEST 2: Nur Obstacles (CW) filtern
+TEST(PathPlannerTest, FilterRings_ShouldOnlyReturnObstacleRings) {
+    std::vector<LineString> rings;
+    rings.push_back({{0, 0}, {0, 1}, {-1, 1}, {-1, 0}});  // Perimeter
+    rings.push_back({{0, 0}, {0, 1}, {1, 1}, {1, 0}});  // Obstacle
+    rings.push_back({{1, 1}, {1, 2}, {2, 2}, {2, 1}});  // Obstacle
+
+    // filterForObstacle = true -> wir wollen nur Obstacles
+    auto result = PathPlanner::filterRings(rings, true);
+
+    ASSERT_EQ(result.size(), 2UL);
+    // Verifizierung: Beim CW Pfad ist der zweite Punkt (0, h)
+    EXPECT_DOUBLE_EQ(result[0].getPoints()[1].x, 0.0);
+    EXPECT_DOUBLE_EQ(result[0].getPoints()[1].y, 1.0);
+}
+
+// TEST 3: Leere Eingabe
+TEST(PathPlannerTest, FilterRings_ShouldHandleEmptyInput) {
+    std::vector<LineString> emptyRings;
+    auto result = PathPlanner::filterRings(emptyRings, true);
+    EXPECT_TRUE(result.empty());
+}
+
+// TEST 4: Mischmasch mit leeren LineStrings
+TEST(PathPlannerTest, FilterRings_ShouldSkipEmptyLineStrings) {
+    std::vector<LineString> rings;
+    rings.push_back(LineString()); // Komplett leerer LineString
+    rings.push_back({{0, 0}, {0, 1}, {-1, 1}, {-1, 0}});  // Perimeter
+
+    auto result = PathPlanner::filterRings(rings, false);
+    ASSERT_EQ(result.size(), 1UL);
 }

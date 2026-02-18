@@ -144,7 +144,7 @@ namespace Planner
         return result;
     }
 
-    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing)
+    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing, int maxRings)
     {
         using namespace Clipper2Lib;
         std::vector<LineString> result;
@@ -155,6 +155,7 @@ namespace Planner
         Path64 perimeterPath;
         for (const auto &p : env.getPerimeter().getPoints())
             perimeterPath.push_back(Point64(p.x * scale, p.y * scale));
+
         perimeterPath = SimplifyPath(perimeterPath, 0.01 * scale);
         if (!IsPositive(perimeterPath))
             std::reverse(perimeterPath.begin(), perimeterPath.end());
@@ -165,15 +166,22 @@ namespace Planner
             Path64 obstaclePath;
             for (const auto &p : obs.getPoints())
                 obstaclePath.push_back(Point64(p.x * scale, p.y * scale));
+
             obstaclePath = SimplifyPath(obstaclePath, 0.01 * scale);
             if (IsPositive(obstaclePath))
                 std::reverse(obstaclePath.begin(), obstaclePath.end());
             currentLevel.push_back(obstaclePath);
         }
 
+        int currentRingCount = 0;
+
         // 2. Iteratives Schrumpfen
         while (!currentLevel.empty())
         {
+            // Abbruch-Bedingung für die Anzahl der Ringe
+            if (maxRings > 0 && currentRingCount >= maxRings)
+                break;
+
             ClipperOffset co;
             co.MiterLimit(2.0);
             co.AddPaths(currentLevel, JoinType::Miter, EndType::Polygon);
@@ -182,18 +190,13 @@ namespace Planner
             co.Execute(-spacing * scale, nextLevel);
 
             // --- INTELLIGENTE RETTUNG ---
-            // Wir suchen nach Gebieten, die in nextLevel nicht mehr existieren.
-            // Dazu nutzen wir 'Difference': Was war in currentLevel, ist aber nicht in nextLevel?
             Paths64 areasToRescue;
-
             if (nextLevel.empty())
             {
-                // Fall A: Alles weg (dein Testfall). Wir retten alles aus dem currentLevel.
                 areasToRescue = currentLevel;
             }
             else
             {
-                // Fall B: Nur Teile weg. Wir berechnen die verschwundenen Gebiete.
                 areasToRescue = Difference(currentLevel, InflatePaths(nextLevel, spacing * scale, JoinType::Miter, EndType::Polygon), FillRule::EvenOdd);
             }
 
@@ -214,7 +217,6 @@ namespace Planner
                     result.push_back(bonusRing);
                 }
 
-                // Wenn nextLevel leer war, sind wir hier fertig
                 if (nextLevel.empty())
                     break;
             }
@@ -229,11 +231,48 @@ namespace Planner
             }
 
             currentLevel = nextLevel;
+            currentRingCount++; // Zähler erhöhen
+
             if (result.size() > 5000)
                 break;
         }
 
         return result;
+    }
+
+    std::vector<LineString> PathPlanner::filterRings(const std::vector<LineString> &rings, bool filterForObstacle)
+    {
+        using namespace Clipper2Lib;
+        double scale = 1000.0;
+        std::vector<LineString> filteredRings;
+
+        for (const auto &r : rings)
+        {
+            if (r.getPoints().empty())
+                continue;
+
+            Path64 tempR;
+            for (const auto &p : r.getPoints())
+            {
+                tempR.push_back(Point64(p.x * scale, p.y * scale));
+            }
+
+            // IsPositive gibt true zurück, wenn CCW (Perimeter)
+            // IsPositive gibt false zurück, wenn CW (Obstacle/Loch)
+            bool isPositive = IsPositive(tempR);
+
+            if (filterForObstacle)
+            {
+                if (!isPositive)
+                    filteredRings.push_back(r);
+            }
+            else
+            {
+                if (isPositive)
+                    filteredRings.push_back(r);
+            }
+        }
+        return filteredRings;
     }
 
     PathPlanner::PlanningResult PathPlanner::connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos)

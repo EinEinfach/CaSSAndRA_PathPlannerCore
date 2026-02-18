@@ -17,16 +17,16 @@ int main()
 
     Point startPos = {0.0, 0.0};
     std::string pattern = "lines";
-    double offset = 1.0;
-    double angle = 0.5;
-    //size_t distanceToBorder = 0;
+    double offset = 0.5;
+    double angle = 1.5;
+    size_t distanceToBorder = 0;
     bool mowArea = true;
     bool mowBorder = true;
     //bool mowBorderCcw = false;
     size_t borderLaps = 1;
     bool mowExclusionsBorder = true;
     //bool mowExclusionBorderCcw = false;
-    size_t exclusionBorderLaps = 1;
+    size_t exclusionBorderLaps = 2;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0}, {0.0, 10.0}};
@@ -64,6 +64,12 @@ int main()
     {
         std::cout << "Generiere Border Slices. Anzahl Runden: " << borderLaps << std::endl;
         slices.push_back(myEnv.getPerimeter());
+        if (borderLaps > 1) {
+            auto borderSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(myEnv, offset, borderLaps - 1), false);
+            for (auto& s : borderSlices) {
+                slices.push_back(s);
+            }
+        }
     }
 
     if (mowExclusionsBorder && exclusionBorderLaps > 0)
@@ -72,6 +78,12 @@ int main()
         for (auto &obs : myEnv.getObstacles())
         {
             slices.push_back(obs);
+        }
+        if (exclusionBorderLaps > 1) {
+            auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(myEnv, offset, exclusionBorderLaps - 1), true);
+            for (auto& s : exclusionsSlices) {
+                slices.push_back(s);
+            }
         }
     }
 
