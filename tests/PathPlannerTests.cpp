@@ -500,3 +500,87 @@ TEST(PathPlannerTest, FindAStarPath_PathSmoothingRespectsObstacles)
     EXPECT_DOUBLE_EQ(smoothed[2].x, 13.0);
     EXPECT_DOUBLE_EQ(smoothed[3].x, 18.0);
 }
+
+// ******************PathPlanner::generateRingSlices*******************
+
+// --- TEST 1: RETTUNG ---
+// Ein Rechteck von 5.0m x 1.6m.
+// Bei Spacing 1.0m würde der normale Ring (1.0m von jeder Seite)
+// die Fläche komplett auslöschen (da 1.6m < 2.0m).
+// Der FINAL_RING_SPACING_FACTOR (0.5) muss hier eine Rettungslinie erzeugen.
+// TEST(PathPlannerTest, GenerateRingSlices_SmallRectangleShouldTriggerRescue)
+// {
+//     Environment env = Environment({{0, 0}, {5, 0}, {5, 1.6}, {0, 1.6}});
+//     Planner::PathPlanner::Weights::FINAL_RING_SPACING_FACTOR = 0.4;
+//     auto slices = PathPlanner::generateRingSlices(env, 1.0);
+
+//     // Wir erwarten mindestens einen Slice (den Rettungsring/Linie)
+//     ASSERT_FALSE(slices.empty()) << "Es wurde kein Rettungsring für das schmale Rechteck erzeugt!";
+
+//     // Da das Original 1.6m breit ist, sollte der Rettungsring (0.5m Offset)
+//     // ca. bei y = 0.5 und y = 1.1 liegen oder eine Mittellinie bilden.
+//     EXPECT_GE(slices.size(), 1UL);
+// }
+
+// --- TEST 2: HINDERNIS-CHECK ---
+// Ein Donut-Szenario. Ringe dürfen niemals in das Hindernis eindringen.
+TEST(PathPlannerTest, GenerateRingSlices_RingsShouldNotIntersectObstacles)
+{
+    Environment env = Environment({{0, 0}, {10, 0}, {10, 10}, {0, 10}});
+    Polygon inner = {{3, 3}, {7, 3}, {7, 7}, {3, 7}};
+    env.addObstacle(inner);
+
+    auto slices = PathPlanner::generateRingSlices(env, 0.5);
+
+    for (const auto &slice : slices)
+    {
+        for (const auto &pt : slice.getPoints())
+        {
+            for (const auto &obs : env.getObstacles()) {
+                EXPECT_FALSE(GeometryUtils::isPointInsidePolygon(pt, obs))
+                << "Pfadpunkt (" << pt.x << ", " << pt.y << ") liegt innerhalb eines Hindernisses!";
+            }
+        }
+    }
+}
+
+// --- TEST 3: ZERFALL (ISLANDS) ---
+// Eine Hantel-Form. Wenn der Steg in der Mitte weggeschmolzen ist,
+// müssen die zwei verbleibenden Inseln unabhängig weiter existieren.
+TEST(PathPlannerTest, GenerateRingSlices_MultiIslandDecomposition)
+{
+    Polygon hantel;
+    // Linker Block
+    hantel.addPoint({0, 0});
+    hantel.addPoint({3, 0});
+    // Schmaler Steg (0.4m hoch)
+    hantel.addPoint({3, 1.3});
+    hantel.addPoint({7, 1.3});
+    // Rechter Block
+    hantel.addPoint({7, 0});
+    hantel.addPoint({10, 0});
+    hantel.addPoint({10, 3});
+    hantel.addPoint({7, 3});
+    // Zurück über den Steg
+    hantel.addPoint({7, 1.7});
+    hantel.addPoint({3, 1.7});
+    hantel.addPoint({3, 3});
+    hantel.addPoint({0, 3});
+
+    Environment env = Environment(hantel);
+
+    // Spacing 1.0 würde den Steg (0.4m) sofort killen.
+    auto slices = PathPlanner::generateRingSlices(env, 1.0);
+
+    // Wir erwarten, dass am Ende separate Slices für links und rechts existieren
+    // (Clipper trennt diese in verschiedene LineStrings im Vektor)
+    EXPECT_GT(slices.size(), 1UL);
+}
+
+// --- TEST 4: LEERES ENVIRONMENT ---
+TEST(PathPlannerTest, GenerateRingSlices_EmptyEnvironmentReturnsEmptySlices)
+{
+    Environment env = {{}}; // Kein Perimeter gesetzt
+    auto slices = PathPlanner::generateRingSlices(env, 1.0);
+    EXPECT_TRUE(slices.empty());
+}

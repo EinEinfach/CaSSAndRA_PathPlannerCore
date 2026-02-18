@@ -1,5 +1,6 @@
 #include "PathPlanner.hpp"
 #include "Geometry.hpp"
+#include "clipper2/clipper.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -7,7 +8,7 @@
 
 namespace Planner
 {
-    bool PathPlanner::enableDebugLogs = true;
+    bool PathPlanner::enableDebugLogs = false;
 
     void logDebug(const std::string &message)
     {
@@ -143,6 +144,98 @@ namespace Planner
         return result;
     }
 
+    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing)
+    {
+        using namespace Clipper2Lib;
+        std::vector<LineString> result;
+        const double scale = 1000.0;
+        Paths64 currentLevel;
+
+        // 1. Initiales Setup (Perimeter CCW, Obstacles CW)
+        Path64 perimeterPath;
+        for (const auto &p : env.getPerimeter().getPoints())
+            perimeterPath.push_back(Point64(p.x * scale, p.y * scale));
+        perimeterPath = SimplifyPath(perimeterPath, 0.01 * scale);
+        if (!IsPositive(perimeterPath))
+            std::reverse(perimeterPath.begin(), perimeterPath.end());
+        currentLevel.push_back(perimeterPath);
+
+        for (const auto &obs : env.getObstacles())
+        {
+            Path64 obstaclePath;
+            for (const auto &p : obs.getPoints())
+                obstaclePath.push_back(Point64(p.x * scale, p.y * scale));
+            obstaclePath = SimplifyPath(obstaclePath, 0.01 * scale);
+            if (IsPositive(obstaclePath))
+                std::reverse(obstaclePath.begin(), obstaclePath.end());
+            currentLevel.push_back(obstaclePath);
+        }
+
+        // 2. Iteratives Schrumpfen
+        while (!currentLevel.empty())
+        {
+            ClipperOffset co;
+            co.MiterLimit(2.0);
+            co.AddPaths(currentLevel, JoinType::Miter, EndType::Polygon);
+
+            Paths64 nextLevel;
+            co.Execute(-spacing * scale, nextLevel);
+
+            // --- INTELLIGENTE RETTUNG ---
+            // Wir suchen nach Gebieten, die in nextLevel nicht mehr existieren.
+            // Dazu nutzen wir 'Difference': Was war in currentLevel, ist aber nicht in nextLevel?
+            Paths64 areasToRescue;
+
+            if (nextLevel.empty())
+            {
+                // Fall A: Alles weg (dein Testfall). Wir retten alles aus dem currentLevel.
+                areasToRescue = currentLevel;
+            }
+            else
+            {
+                // Fall B: Nur Teile weg. Wir berechnen die verschwundenen Gebiete.
+                areasToRescue = Difference(currentLevel, InflatePaths(nextLevel, spacing * scale, JoinType::Miter, EndType::Polygon), FillRule::EvenOdd);
+            }
+
+            if (!areasToRescue.empty())
+            {
+                ClipperOffset rescueOffset;
+                rescueOffset.MiterLimit(2.0);
+                rescueOffset.AddPaths(areasToRescue, JoinType::Miter, EndType::Polygon);
+
+                Paths64 bonusLevel;
+                rescueOffset.Execute(-(spacing * Weights::FINAL_RING_SPACING_FACTOR) * scale, bonusLevel);
+
+                for (const auto &bonusPath : bonusLevel)
+                {
+                    LineString bonusRing;
+                    for (const auto &pt : bonusPath)
+                        bonusRing.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+                    result.push_back(bonusRing);
+                }
+
+                // Wenn nextLevel leer war, sind wir hier fertig
+                if (nextLevel.empty())
+                    break;
+            }
+
+            // Normal gefundene Ringe zum Ergebnis
+            for (const auto &path : nextLevel)
+            {
+                LineString ring;
+                for (const auto &pt : path)
+                    ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+                result.push_back(ring);
+            }
+
+            currentLevel = nextLevel;
+            if (result.size() > 5000)
+                break;
+        }
+
+        return result;
+    }
+
     PathPlanner::PlanningResult PathPlanner::connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos)
     {
         PlanningResult result;
@@ -166,7 +259,7 @@ namespace Planner
             if (next.index != -1)
             {
                 visited[next.index] = true;
-                addSliceToPath(result.path, slices[next.index], next.reverse);
+                addSliceToPath(result.path, slices[next.index], next);
             }
             // 2.2 Weg braucht A*
             else
@@ -193,7 +286,7 @@ namespace Planner
                     }
 
                     visited[next.index] = true;
-                    addSliceToPath(result.path, slices[next.index], next.reverse);
+                    addSliceToPath(result.path, slices[next.index], next);
                 }
             }
             currentPos = result.path.getPoints().back();
@@ -206,7 +299,7 @@ namespace Planner
     {
         // Ein winziges Stückchen von den Endpunkten weggehen,
         // um numerische Probleme an Ecken zu vermeiden
-        double epsilon = 0.01;
+        double epsilon = Weights::EPSILON_DISTANCE;
         Point dir = {b.x - a.x, b.y - a.y};
         double len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
 
@@ -245,18 +338,40 @@ namespace Planner
         return true;
     }
 
-    void PathPlanner::addSliceToPath(LineString &path, const LineString &slice, bool reverse)
+    void PathPlanner::addSliceToPath(LineString &path, const LineString &slice, BestNextSegment best)
     {
         const auto &pts = slice.getPoints();
-        if (reverse)
+        if (pts.empty())
+            return;
+        if (best.isPolygon)
         {
-            for (auto it = pts.rbegin(); it != pts.rend(); ++it)
-                path.addPoint(*it);
+            size_t n = pts.size();
+            size_t startIdx = best.entryPointIdx;
+
+            // Einmal komplett im Kreis laufen
+            for (size_t i = 0; i <= n; ++i)
+            {
+                // Modulo sorgt dafür, dass wir nach dem letzten Punkt wieder bei 0 landen
+                size_t currentIdx = (startIdx + i) % n;
+                path.addPoint(pts[currentIdx]);
+            }
+
+            // Den Kreis explizit schließen, indem wir den allerersten
+            // angefahrenen Punkt (startIdx) nochmal hinzufügen
+            // (Das passiert durch die Schleife bis <= n bereits automatisch)
         }
         else
         {
-            for (const auto &p : pts)
-                path.addPoint(p);
+            if (best.reverse)
+            {
+                for (auto it = pts.rbegin(); it != pts.rend(); ++it)
+                    path.addPoint(*it);
+            }
+            else
+            {
+                for (const auto &p : pts)
+                    path.addPoint(p);
+            }
         }
     }
 
@@ -277,21 +392,37 @@ namespace Planner
             if (pts.empty())
                 continue;
 
-            // Wir prüfen Start- und Endpunkt des Slices
-            Point start = pts.front();
-            Point end = pts.back();
-
-            double dStart = GeometryUtils::calculateDistance(currentPos, start);
-            double dEnd = GeometryUtils::calculateDistance(currentPos, end);
-
-            // Wir nehmen das absolut nächste Ende, sofern der Weg frei ist
-            if (dStart < best.distance && isPathClear(currentPos, start, env))
+            // Polygon?
+            if (pts.size() > 2)
             {
-                best = {(int)j, false, dStart};
+                for (size_t pIdx = 0; pIdx < pts.size(); ++pIdx)
+                {
+                    double d = GeometryUtils::calculateDistance(currentPos, pts[pIdx]);
+                    if (d < best.distance && isPathClear(currentPos, pts[pIdx], env))
+                    {
+                        best = {(int)j, false, d, pIdx, true}; // true = isPolygon
+                    }
+                }
             }
-            if (dEnd < best.distance && isPathClear(currentPos, end, env))
+            else
             {
-                best = {(int)j, true, dEnd};
+                // Linie!
+                // Wir prüfen Start- und Endpunkt des Slices
+                Point start = pts.front();
+                Point end = pts.back();
+
+                double dStart = GeometryUtils::calculateDistance(currentPos, start);
+                double dEnd = GeometryUtils::calculateDistance(currentPos, end);
+
+                // Wir nehmen das absolut nächste Ende, sofern der Weg frei ist
+                if (dStart < best.distance && isPathClear(currentPos, start, env))
+                {
+                    best = {(int)j, false, dStart};
+                }
+                if (dEnd < best.distance && isPathClear(currentPos, end, env))
+                {
+                    best = {(int)j, true, dEnd};
+                }
             }
         }
         if (best.index != -1)
@@ -313,17 +444,33 @@ namespace Planner
                 continue;
 
             const auto &pts = slices[j].getPoints();
-            double dStart = GeometryUtils::calculateDistance(currentPos, pts.front());
-            double dEnd = GeometryUtils::calculateDistance(currentPos, pts.back());
-
-            // Hier prüfen wir NICHT isPathClear, wir nehmen einfach das Naheliegendste
-            if (dStart < best.distance)
+            // Polygon?
+            if (pts.size() > 2)
             {
-                best = {(int)j, false, dStart};
+                for (size_t pIdx = 0; pIdx < pts.size(); ++pIdx)
+                {
+                    double d = GeometryUtils::calculateDistance(currentPos, pts[pIdx]);
+                    if (d < best.distance)
+                    {
+                        best = {(int)j, false, d, pIdx, true}; // true = isPolygon
+                    }
+                }
             }
-            if (dEnd < best.distance)
+            else
             {
-                best = {(int)j, true, dEnd};
+                // Linie!
+                double dStart = GeometryUtils::calculateDistance(currentPos, pts.front());
+                double dEnd = GeometryUtils::calculateDistance(currentPos, pts.back());
+
+                // Hier prüfen wir NICHT isPathClear, wir nehmen einfach das Naheliegendste
+                if (dStart < best.distance)
+                {
+                    best = {(int)j, false, dStart};
+                }
+                if (dEnd < best.distance)
+                {
+                    best = {(int)j, true, dEnd};
+                }
             }
         }
         return best;
@@ -482,7 +629,7 @@ namespace Planner
             int idxDiff = std::abs(static_cast<int>(current.wireIdx) - static_cast<int>(next.wireIdx));
             if (idxDiff == 1)
             {
-                return {true, 0.1}; // Erlaubt ohne isPathClear, hoher Bonus
+                return {true, Weights::WIRE_COST_MULTIPLIER}; // Erlaubt ohne isPathClear, hoher Bonus
             }
         }
 
@@ -519,11 +666,11 @@ namespace Planner
         double newGCost = current.gCost + (dist * costMultiplier);
         double hCost = GeometryUtils::calculateDistance(nextNav.pos, goal);
 
-        // Wenn es ein Drahtpunkt ist, geben wir einen "Motivations-Bonus" 
+        // Wenn es ein Drahtpunkt ist, geben wir einen "Motivations-Bonus"
         // auf die Heuristik, damit der f-Wert sinkt.
         if (nextNav.isWire)
         {
-            hCost *= 0.65;
+            hCost *= Weights::WIRE_HEURISTIC_BIAS;
             double fCost = newGCost + hCost;
             std::stringstream ss;
             ss << "   [A* Update] Draht-Punkt " << nextNav.wireIdx
