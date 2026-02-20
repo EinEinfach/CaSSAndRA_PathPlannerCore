@@ -21,6 +21,8 @@ namespace Planner
 
         void addPoint(Point p);
 
+        void setPoints(const std::vector<Point> &pts);
+
         const std::vector<Point> &getPoints() const;
 
         void rotate(double angleRad);
@@ -76,5 +78,11 @@ namespace Planner
 
         // Berechne Distanz zwischen zwei Punkten
         static double calculateDistance(Point a, Point b);
+
+        // Berechne Fläche
+        static double calculateSignedArea(const Polygon &poly);
+
+        // Berechne die Orientierung (CW, CCW)
+        static void ensureOrientation(Polygon &poly, bool ccw);
     };
 };

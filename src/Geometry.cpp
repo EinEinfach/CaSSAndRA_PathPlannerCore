@@ -14,6 +14,11 @@ namespace Planner
         points.push_back(p);
     }
 
+    void LineString::setPoints(const std::vector<Point> &pts)
+    {
+        this->points = pts;
+    }
+
     const std::vector<Point> &LineString::getPoints() const
     {
         return points;
@@ -425,5 +430,32 @@ namespace Planner
     double GeometryUtils::calculateDistance(Point a, Point b)
     {
         return std::sqrt(std::pow(b.x - a.x, 2) + std::pow(b.y - a.y, 2));
+    }
+
+    double GeometryUtils::calculateSignedArea(const Polygon &poly)
+    {
+        const auto &pts = poly.getPoints();
+        if (pts.size() < 3)
+            return 0.0;
+        double area = 0.0;
+        for (size_t i = 0; i < pts.size(); ++i)
+        {
+            size_t j = (i + 1) % pts.size();
+            area += (pts[i].x * pts[j].y) - (pts[j].x * pts[i].y);
+        }
+        return area / 2.0;
+    }
+
+    void GeometryUtils::ensureOrientation(Polygon &poly, bool ccw)
+    {
+        double area = calculateSignedArea(poly);
+        bool isCurrentlyCCW = (area > 0);
+        if (isCurrentlyCCW != ccw)
+        {
+            // Punkte umkehren
+            auto pts = poly.getPoints();
+            std::reverse(pts.begin(), pts.end());
+            poly.setPoints(pts); // Angenommen, Polygon hat setPoints
+        }
     }
 }

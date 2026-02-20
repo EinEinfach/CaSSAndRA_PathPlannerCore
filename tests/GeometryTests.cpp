@@ -484,3 +484,82 @@ TEST(GeometryUtilsTest, RotateLineString)
     EXPECT_NEAR(pts[1].x, -1.0, 1e-7);
     EXPECT_NEAR(pts[1].y, 0.0, 1e-7);
 }
+
+class GeometryUtilsTests : public ::testing::Test
+{
+protected:
+    Polygon createSquare(bool ccw)
+    {
+        std::vector<Point> pts;
+        if (ccw)
+        {
+            // Gegenuhrzeigersinn (CCW) -> Positive Fläche
+            pts = {{0, 0}, {10, 0}, {10, 10}, {0, 10}};
+        }
+        else
+        {
+            // Uhrzeigersinn (CW) -> Negative Fläche
+            pts = {{0, 0}, {0, 10}, {10, 10}, {10, 0}};
+        }
+        Polygon p;
+        p.setPoints(pts);
+        return p;
+    }
+};
+
+// ******************GeometryUtils::calculatedSignedArea und ensureOrientation*******************
+
+// 1. Test für die Berechnung der vorzeichenbehafteten Fläche
+TEST_F(GeometryUtilsTests, GeometryUtilsTests_CalculateSignedArea)
+{
+    Polygon ccwSquare = createSquare(true);
+    Polygon cwSquare = createSquare(false);
+
+    // Ein 10x10 Quadrat hat eine Fläche von 100
+    EXPECT_NEAR(GeometryUtils::calculateSignedArea(ccwSquare), 100.0, 1e-9);
+    EXPECT_NEAR(GeometryUtils::calculateSignedArea(cwSquare), -100.0, 1e-9);
+}
+
+// 2. Test für die Sicherstellung der Orientierung (CCW erzwingen)
+TEST_F(GeometryUtilsTests, GeometryUtilsTests_EnsureOrientationCCW)
+{
+    // 1. Setup: Starte mit einem CW Quadrat
+    // Punkte: {0,0}, {0,10}, {10,10}, {10,0} -> Area -100
+    Polygon poly = createSquare(false);
+    ASSERT_LT(GeometryUtils::calculateSignedArea(poly), 0);
+
+    // 2. Aktion: Erzwinger CCW
+    GeometryUtils::ensureOrientation(poly, true);
+
+    // 3. Prüfung der Fläche
+    EXPECT_GT(GeometryUtils::calculateSignedArea(poly), 0);
+    EXPECT_NEAR(GeometryUtils::calculateSignedArea(poly), 100.0, 1e-9);
+
+    // 4. Prüfung der Punkt-Reihenfolge
+    auto pts = poly.getPoints();
+    // Nach dem reverse von {0,0}, {0,10}, {10,10}, {10,0}
+    // Erwarten wir: {10,0}, {10,10}, {0,10}, {0,0}
+
+    EXPECT_EQ(pts[0].x, 10.0);
+    EXPECT_EQ(pts[0].y, 0.0);
+    EXPECT_EQ(pts[1].x, 10.0);
+    EXPECT_EQ(pts[1].y, 10.0);
+    EXPECT_EQ(pts[2].x, 0.0);
+    EXPECT_EQ(pts[2].y, 10.0);
+    EXPECT_EQ(pts[3].x, 0.0);
+    EXPECT_EQ(pts[3].y, 0.0);
+}
+
+// 3. Test für die Sicherstellung der Orientierung (CW erzwingen)
+TEST_F(GeometryUtilsTests, GeometryUtilsTests_EnsureOrientationCW)
+{
+    // Starte mit einem CCW Quadrat (falsch herum für Obstacle)
+    Polygon poly = createSquare(true);
+    EXPECT_GT(GeometryUtils::calculateSignedArea(poly), 0);
+
+    // Erzwinger CW (für Obstacles)
+    GeometryUtils::ensureOrientation(poly, false);
+
+    EXPECT_LT(GeometryUtils::calculateSignedArea(poly), 0); // Check: Jetzt CW
+    EXPECT_NEAR(GeometryUtils::calculateSignedArea(poly), -100.0, 1e-9);
+}

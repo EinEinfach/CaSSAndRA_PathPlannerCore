@@ -3,17 +3,24 @@
 namespace Planner
 {
     Environment::Environment(Polygon perimeter) : perimeter(perimeter) {
-                                                    // Add Validierungen, ist Perimeter geschlossen oder gibt es selbstüberscheidungen
-                                                };
+        // Perimeter MUSS CCW sein
+        GeometryUtils::ensureOrientation(this->perimeter, true);
+    }
 
     void Environment::addObstacle(const Polygon &obs)
     {
-        obstacles.push_back(obs);
+        Polygon orientedObs = obs;
+        // Obstacles MÜSSEN CW (Uhrzeigersinn) sein
+        GeometryUtils::ensureOrientation(orientedObs, false);
+        obstacles.push_back(orientedObs);
     }
 
     void Environment::addMowArea(const Polygon &mowArea)
     {
-        mowAreas.push_back(mowArea);
+        Polygon orientedArea = mowArea;
+        // MowAreas sind Teilbereiche des Perimeters -> CCW
+        GeometryUtils::ensureOrientation(orientedArea, true);
+        mowAreas.push_back(orientedArea);
     }
 
     void Environment::setVirtualWire(const LineString &wire)
