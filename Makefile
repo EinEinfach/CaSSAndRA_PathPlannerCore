@@ -10,7 +10,10 @@ BUILD_DIR = build
 TARGET = $(BUILD_DIR)/CoveragePlanner
 
 # Quellen finden
-SRCS = main.cpp $(wildcard $(SRC_DIR)/*.cpp)
+# SRCS = main.cpp $(wildcard $(SRC_DIR)/*.cpp)
+ALL_SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+# Alle .cpp Dateien außer dem Wrapper für die Standalone-App
+SRCS = main.cpp $(filter-out $(SRC_DIR)/python_wrapper.cpp, $(ALL_SRCS))
 
 # Objektdateien (build/main.o, build/Geometry.o, etc.)
 OBJS = $(addprefix $(BUILD_DIR)/, $(notdir $(SRCS:.cpp=.o)))
@@ -58,11 +61,17 @@ test: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
 	$(CXX) $(CXXFLAGS) $(GTEST_INC) $(TEST_SRCS) $(filter-out $(BUILD_DIR)/main.o, $(OBJS)) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
 	./$(BUILD_DIR)/run_tests
 
-# # Pfade für Homebrew GoogleTest (auf Apple Silicon)
-# GTEST_FLAGS = -L/opt/homebrew/lib -lgtest -lgtest_main -lpthread
-# GTEST_INC = -I/opt/homebrew/include
+######       PYTHON_MODULE      ######
+# Pfad zur venv (relativ zum Makefile)
+VENV_BIN = .venv/bin
+# 1. Die Pfade holen (hast du wahrscheinlich schon)
+PY_INC = $(shell $(VENV_BIN)/python3 -m pybind11 --includes)
+PY_SUFFIX = $(shell $(VENV_BIN)/python3-config --extension-suffix)
 
-# # Ein separates Target für die Tests
-# test: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
-# 	$(CXX) $(CXXFLAGS) $(GTEST_INC) tests/GeometryTests.cpp $(filter-out $(BUILD_DIR)/main.o, $(OBJS)) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
-# 	./$(BUILD_DIR)/run_tests
+# 2. Das korrigierte Target
+# Wir nehmen alle OBJS (außer main.o), aber kompilieren den Wrapper direkt mit
+python_module: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
+	$(CXX) $(CXXFLAGS) $(PY_INC) -shared -undefined dynamic_lookup \
+	$(filter-out $(BUILD_DIR)/main.o, $(OBJS)) \
+	src/python_wrapper.cpp \
+	-o planner_module$(PY_SUFFIX)
