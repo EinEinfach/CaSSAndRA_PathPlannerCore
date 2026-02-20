@@ -19,7 +19,7 @@ int main()
     Point startPos = {0.0, 0.0};
 
     Planner::PathSettings settings;
-    settings.pattern = "squares";
+    settings.pattern = "rings";
     settings.offset = 0.2;
     settings.angle = 0.5;
     settings.distanceToBorder = 0.0;
@@ -36,8 +36,10 @@ int main()
     auto myEnv1 = Environment{perimeter1};
     Polygon obstacle1 = {{5.0, 2.0}, {7.0, 2.0}, {7.0, 4.0}, {5.0, 4.5}};
     Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
+    Polygon mowArea = {{10.0, 22.0}, {10.0, 23.0}, {12.0, 23.0}, {12.0, 22.0}};
     myEnv1.addObstacle(obstacle1);
     myEnv1.addObstacle(obstacle2);
+    myEnv1.addObstacle(mowArea);
     LineString virtualWire = {{9.0, 10.0}, {18.0, 14.0}, {18.0, 26.0}};
     myEnv1.setVirtualWire(virtualWire);
 

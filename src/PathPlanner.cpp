@@ -25,119 +25,96 @@ namespace Planner
         if (perimeterPoints.size() < 3)
             return result;
 
-        // Bounding Box für Y finden
-        double minY = perimeterPoints[0].y;
-        double maxY = perimeterPoints[0].y;
-        for (const auto &p : perimeterPoints)
-        {
-            minY = std::min(minY, p.y);
-            maxY = std::max(maxY, p.y);
-        }
+        // 1. Bounding Box
+        auto [minY, maxY] = std::minmax_element(perimeterPoints.begin(), perimeterPoints.end(),
+                                                [](const Point &a, const Point &b)
+                                                { return a.y < b.y; });
 
-        for (double y = minY + spacing; y < maxY; y += spacing)
+        // Hilfsfunktion zum Sammeln aller X-Schnittpunkte für ein Polygon
+        auto collectIntersections = [&](const Polygon &poly, double y, std::vector<double> &x_list)
+        {
+            const auto &pts = poly.getPoints();
+            Point c = {-1000.0, y}, d = {1000.0, y};
+            for (size_t i = 0; i < pts.size(); ++i)
+            {
+                Point p1 = pts[i], p2 = pts[(i + 1) % pts.size()];
+                Point intersect;
+
+                if (GeometryUtils::getIntersectionPoint(p1, p2, c, d, intersect))
+                    x_list.push_back(intersect.x);
+
+                if (GeometryUtils::getTouchPoint(p1, p2, c, d, intersect))
+                    x_list.push_back(intersect.x);
+
+                LineString iLine;
+                if (GeometryUtils::getIntersectionLine(p1, p2, c, d, iLine))
+                {
+                    for (const auto &p : iLine.getPoints())
+                        x_list.push_back(p.x);
+                }
+            }
+        };
+
+        // 2. Scanline Loop
+        for (double y = minY->y + spacing; y < maxY->y; y += spacing)
         {
             std::vector<double> x_intersections;
-            Point c = {-1000.0, y};
-            Point d = {1000.0, y};
 
-            // 1. Schnittpunkte mit Perimeter
-            for (size_t i = 0; i < perimeterPoints.size(); ++i)
-            {
-                Point intersect;
-                // Prüfe echte Durchschüsse
-                if (GeometryUtils::getIntersectionPoint(perimeterPoints[i],
-                                                        perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
-                {
-                    x_intersections.push_back(intersect.x);
-                }
-                // Prüfe Berührungen
-                if (GeometryUtils::getTouchPoint(perimeterPoints[i],
-                                                 perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersect))
-                {
-                    x_intersections.push_back(intersect.x);
-                }
-                // Prüfe ob es bereich gibt wo die Linie auf dem Perimeter liegt, wenn ja, füge diese Linie hnzu
-                LineString intersectLine;
-                if (GeometryUtils::getIntersectionLine(perimeterPoints[i], perimeterPoints[(i + 1) % perimeterPoints.size()], c, d, intersectLine))
-                {
-                    const auto &pts = intersectLine.getPoints();
-                    for (const auto &p : pts)
-                    {
-                        x_intersections.push_back(p.x);
-                    }
-                }
-            }
-
-            // 2. NEU: Schnittpunkte mit ALLEN Hindernissen
+            // Schnittpunkte von ALLEN Geometrien sammeln
+            collectIntersections(env.getPerimeter(), y, x_intersections);
             for (const auto &obs : env.getObstacles())
-            {
-                const auto &obsPts = obs.getPoints();
-                for (size_t i = 0; i < obsPts.size(); ++i)
-                {
-                    Point intersect;
-                    // Prüfe echte Durchschüsse
-                    if (GeometryUtils::getIntersectionPoint(obsPts[i],
-                                                            obsPts[(i + 1) % obsPts.size()], c, d, intersect))
-                    {
-                        x_intersections.push_back(intersect.x);
-                    }
-                    // Prüfe Berührungen
-                    if (GeometryUtils::getTouchPoint(obsPts[i],
-                                                     obsPts[(i + 1) % obsPts.size()], c, d, intersect))
-                    {
-                        x_intersections.push_back(intersect.x);
-                    }
+                collectIntersections(obs, y, x_intersections);
+            for (const auto &area : env.getMowAreas())
+                collectIntersections(area, y, x_intersections);
 
-                    // Prüfe ob es bereich gibt wo die Linie auf dem Obstacle liegt, wenn ja, füge diese Linie hnzu
-                    LineString intersectLine;
-                    if (GeometryUtils::getIntersectionLine(obsPts[i], obsPts[(i + 1) % obsPts.size()], c, d, intersectLine))
-                    {
-                        const auto &pts = intersectLine.getPoints();
-                        for (const auto &p : pts)
-                        {
-                            x_intersections.push_back(p.x);
-                        }
-                    }
-                }
-            }
-
-            // 3. Sortieren
             std::sort(x_intersections.begin(), x_intersections.end());
+            x_intersections.erase(std::unique(x_intersections.begin(), x_intersections.end(),
+                                              [](double a, double b)
+                                              { return std::abs(a - b) < 1e-7; }),
+                                  x_intersections.end());
 
-            // 4. Paare bilden (Die Logik: Perimeter_In -> Obstacle_In -> Obstacle_Out -> Perimeter_Out)
-            // Jedes Segment zwischen zwei Schnittpunkten prüfen
+            // 3. Segmente validieren
             for (size_t i = 0; i + 1 < x_intersections.size(); ++i)
             {
                 double xStart = x_intersections[i];
                 double xEnd = x_intersections[i + 1];
-
                 if (std::abs(xEnd - xStart) < 1e-7)
                     continue;
 
-                // Testpunkt in der Mitte des Segments
-                Point midPoint = {(xStart + xEnd) / 2.0, y};
+                Point midP = {(xStart + xEnd) / 2.0, y};
 
-                // Ist die Mitte im Perimeter?
-                bool inPerimeter = GeometryUtils::isPointCoveredByPolygon(midPoint, env.getPerimeter());
+                // Validierungskette
+                bool ok = GeometryUtils::isPointCoveredByPolygon(midP, env.getPerimeter());
 
-                // Ist die Mitte in IRGENDEINEM Hindernis?
-                bool inObstacle = false;
-                for (const auto &obs : env.getObstacles())
-                {
-                    if (GeometryUtils::isPointCoveredByPolygon(midPoint, obs))
+                if (ok)
+                { // Check Obstacles
+                    for (const auto &obs : env.getObstacles())
                     {
-                        inObstacle = true;
-                        break;
+                        if (GeometryUtils::isPointCoveredByPolygon(midP, obs))
+                        {
+                            ok = false;
+                            break;
+                        }
                     }
                 }
 
-                // Nur wenn im Perimeter UND NICHT im Hindernis
-                if (inPerimeter && !inObstacle)
+                if (ok && !env.getMowAreas().empty())
+                { // Check MowAreas
+                    bool inMow = false;
+                    for (const auto &area : env.getMowAreas())
+                    {
+                        if (GeometryUtils::isPointCoveredByPolygon(midP, area))
+                        {
+                            inMow = true;
+                            break;
+                        }
+                    }
+                    ok = inMow;
+                }
+
+                if (ok)
                 {
-                    LineString slice;
-                    slice.addPoint({xStart, y});
-                    slice.addPoint({xEnd, y});
-                    result.push_back(slice);
+                    result.push_back(LineString({{xStart, y}, {xEnd, y}}));
                 }
             }
         }
@@ -223,11 +200,11 @@ namespace Planner
 
             // Normal gefundene Ringe zum Ergebnis
             for (const auto &path : nextLevel)
-            {
-                LineString ring;
-                for (const auto &pt : path)
-                    ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
-                result.push_back(ring);
+                {
+                    LineString ring;
+                    for (const auto &pt : path)
+                        ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+                    result.push_back(ring);
             }
 
             currentLevel = nextLevel;

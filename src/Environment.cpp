@@ -11,6 +11,11 @@ namespace Planner
         obstacles.push_back(obs);
     }
 
+    void Environment::addMowArea(const Polygon &mowArea)
+    {
+        mowAreas.push_back(mowArea);
+    }
+
     void Environment::setVirtualWire(const LineString &wire)
     {
         virtualWire = wire;
@@ -29,8 +34,16 @@ namespace Planner
         return obstacles;
     }
 
+    const std::vector<Polygon>& Environment::getMowAreas() const{
+        return mowAreas;
+    }
+
     const LineString& Environment::getVirtualWire() const{
         return virtualWire;
+    }
+
+    const LineString& Environment::getDockingWire() const{
+        return dockingWire;
     }
 
     void Environment::rotate(double angleRad) {
@@ -38,6 +51,10 @@ namespace Planner
         
         for (auto& obs : obstacles) {
             obs.rotate(angleRad);
+        }
+
+        for (auto& mowArea : mowAreas) {
+            mowArea.rotate(angleRad);
         }
 
         virtualWire.rotate(angleRad);
