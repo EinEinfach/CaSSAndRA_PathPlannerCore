@@ -37,7 +37,8 @@ PYBIND11_MODULE(planner_module, m)
         .def("getPerimeter", &Environment::getPerimeter)
         .def("getObstacles", &Environment::getObstacles)
         .def("setVirtualWire", &Environment::setVirtualWire)
-        .def("setDockingWire", &Environment::setDockingWire);
+        .def("setDockingWire", &Environment::setDockingWire)
+        .def("addMowArea", &Environment::addMowArea);
 
     // 5. PathSettings
     py::class_<PathSettings>(m, "PathSettings")
