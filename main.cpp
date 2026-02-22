@@ -26,20 +26,20 @@ int main()
     settings.mowArea = true;
     settings.mowBorder = true;
     settings.mowBorderCcw = false;
-    settings.borderLaps = 0;
+    settings.borderLaps = 1;
     settings.mowExclusionsBoder = true;
     settings.mowExclusionsBorderCcw= false;
-    settings.exclusionsBorderLaps = 0;
+    settings.exclusionsBorderLaps = 2;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0}, {0.0, 10.0}};
     auto myEnv1 = Environment{perimeter1};
     Polygon obstacle1 = {{5.0, 2.0}, {7.0, 2.0}, {7.0, 4.0}, {5.0, 4.5}};
     Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
-    Polygon obstacle3 = {{3.0, 24.0}, {3.0, 22.0}, {12.0, 22.0}, {12.0, 24.0}};
+    Polygon obstacle3 = {{0.0, 24.0}, {0.0, 22.0}, {12.0, 22.0}, {12.0, 24.0}};
     Polygon mowArea1 = {{9.0, 25.0}, {9.0, 21.0}, {13.0, 21.0}, {13.0, 25.0}};
     myEnv1.addObstacle(obstacle1);
-    myEnv1.addMowArea(obstacle2);
+    myEnv1.addObstacle(obstacle2);
     myEnv1.addObstacle(obstacle3);
     myEnv1.addMowArea(mowArea1);
     LineString virtualWire = {{9.0, 10.0}, {18.0, 14.0}, {18.0, 26.0}};

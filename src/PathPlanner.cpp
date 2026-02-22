@@ -121,12 +121,12 @@ namespace Planner
         return result;
     }
 
-    std::vector<LineString> PathPlanner::generateRingSlicesMultiple(const Environment &env, double spacing, int maxRings)
+    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing, int maxRings)
     {
         // Fall A: Keine mowAreas -> Direkt die bewährte Logik auf der Original-Env
         if (env.getMowAreas().empty())
         {
-            return generateRingSlices(env, env, spacing, maxRings);
+            return generateRingSlicesInternal(env, env, spacing, maxRings);
         }
 
         // Fall B: MowAreas vorhanden
@@ -149,7 +149,7 @@ namespace Planner
             }
 
             // Die bewährte Methode für diese Teil-Umgebung aufrufen
-            std::vector<LineString> areaSlices = generateRingSlices(env, tempEnv, spacing, maxRings);
+            std::vector<LineString> areaSlices = generateRingSlicesInternal(env, tempEnv, spacing, maxRings);
 
             // Ergebnisse sammeln
             allSlices.insert(allSlices.end(), areaSlices.begin(), areaSlices.end());
@@ -158,7 +158,7 @@ namespace Planner
         return allSlices;
     }
 
-    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &absBorder, const Environment &env, double spacing, int maxRings)
+    std::vector<LineString> PathPlanner::generateRingSlicesInternal(const Environment &absBorder, const Environment &env, double spacing, int maxRings)
     {
         using namespace Clipper2Lib;
         std::vector<LineString> result;

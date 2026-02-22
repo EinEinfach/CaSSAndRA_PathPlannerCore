@@ -17,7 +17,7 @@ namespace Planner
             std::vector<Environment> islands;
             if (settings.distanceToBorder > 0)
             {
-                auto rings = PathPlanner::generateRingSlices(workEnv, workEnv, settings.distanceToBorder, 1);
+                auto rings = PathPlanner::generateRingSlices(workEnv, settings.distanceToBorder, 1);
                 auto perimeters = PathPlanner::filterRings(rings, false);
                 auto obstacles = PathPlanner::filterRings(rings, true);
 
@@ -57,7 +57,7 @@ namespace Planner
                 }
                 else
                 {
-                    islandSlices = PathPlanner::generateRingSlicesMultiple(island, settings.offset);
+                    islandSlices = PathPlanner::generateRingSlices(island, settings.offset);
                 }
                 allSlices.insert(allSlices.end(), islandSlices.begin(), islandSlices.end());
             }
@@ -69,7 +69,7 @@ namespace Planner
             allSlices.push_back(workEnv.getPerimeter());
             if (settings.borderLaps > 1)
             {
-                auto borderSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, workEnv, settings.offset, settings.borderLaps - 1), false);
+                auto borderSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.borderLaps - 1), false);
                 for (auto &s : borderSlices)
                 {
                     allSlices.push_back(s);
@@ -86,7 +86,7 @@ namespace Planner
             }
             if (settings.exclusionsBorderLaps > 1)
             {
-                auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, workEnv, settings.offset, settings.exclusionsBorderLaps - 1), true);
+                auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.exclusionsBorderLaps - 1), true);
                 for (auto &s : exclusionsSlices)
                 {
                     allSlices.push_back(s);
