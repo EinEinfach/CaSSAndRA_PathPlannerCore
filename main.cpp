@@ -19,25 +19,25 @@ int main()
     Point startPos = {0.0, 0.0};
 
     Planner::PathSettings settings;
-    settings.pattern = "rings";
+    settings.pattern = "lines";
     settings.offset = 0.2;
     settings.angle = 0.0;
-    settings.distanceToBorder = 0.0;
+    settings.distanceToBorder = 0.5;
     settings.mowArea = true;
-    settings.mowBorder = true;
+    settings.mowBorder = false;
     settings.mowBorderCcw = false;
     settings.borderLaps = 1;
-    settings.mowExclusionsBoder = true;
+    settings.mowExclusionsBoder = false;
     settings.mowExclusionsBorderCcw= false;
-    settings.exclusionsBorderLaps = 2;
+    settings.exclusionsBorderLaps = 4;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0}, {0.0, 10.0}};
     auto myEnv1 = Environment{perimeter1};
     Polygon obstacle1 = {{5.0, 2.0}, {7.0, 2.0}, {7.0, 4.0}, {5.0, 4.5}};
     Polygon obstacle2 = {{10.0, 4.0}, {12.0, 3.0}, {12.0, 6.0}, {10.0, 5.5}};
-    Polygon obstacle3 = {{0.0, 24.0}, {0.0, 22.0}, {12.0, 22.0}, {12.0, 24.0}};
-    Polygon mowArea1 = {{9.0, 25.0}, {9.0, 21.0}, {13.0, 21.0}, {13.0, 25.0}};
+    Polygon obstacle3 = {{3.0, 24.0}, {3.0, 22.0}, {12.0, 22.0}, {12.0, 24.0}};
+    Polygon mowArea1 = {{2.0, 25.0}, {2.0, 21.0}, {13.0, 21.0}, {13.0, 25.0}};
     myEnv1.addObstacle(obstacle1);
     myEnv1.addObstacle(obstacle2);
     myEnv1.addObstacle(obstacle3);

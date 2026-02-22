@@ -15,9 +15,9 @@ namespace Planner
         {
             // Zerlegung in Teil-Inseln (Shrinking-Logik)
             std::vector<Environment> islands;
-            if (settings.distanceToBorder > 0)
+            if (settings.distanceToBorder > 0.0)
             {
-                auto rings = PathPlanner::generateRingSlices(workEnv, settings.distanceToBorder, 1);
+                auto rings = PathPlanner::generateRingSlices(workEnv, settings.distanceToBorder, 1, settings.distanceToBorder);
                 auto perimeters = PathPlanner::filterRings(rings, false);
                 auto obstacles = PathPlanner::filterRings(rings, true);
 
@@ -50,7 +50,8 @@ namespace Planner
                     island.rotate(M_PI / 2);
                     auto islandSlices90 = PathPlanner::generateSlices(island, settings.offset);
                     island.rotate(-M_PI / 2);
-                    for (auto &l : islandSlices90) {
+                    for (auto &l : islandSlices90)
+                    {
                         l.rotate(-M_PI / 2);
                     }
                     islandSlices.insert(islandSlices.end(), islandSlices90.begin(), islandSlices90.end());
@@ -66,27 +67,28 @@ namespace Planner
         // Teil 2 Bearbeite perimeter border
         if (settings.mowBorder && settings.borderLaps > 0)
         {
-            allSlices.push_back(workEnv.getPerimeter());
-            if (settings.borderLaps > 1)
+            // Wir fordern borderLaps an.
+            // Intern wird der erste Ring mit Spacing 0 erzeugt (= Perimeter/Obstacle-Kontur)
+            auto borderSlices = PathPlanner::filterRings(
+                PathPlanner::generateRingSlices(workEnv, settings.offset, settings.borderLaps),
+                false);
+
+            for (auto &s : borderSlices)
             {
-                auto borderSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.borderLaps - 1), false);
-                for (auto &s : borderSlices)
-                {
-                    allSlices.push_back(s);
-                }
+                allSlices.push_back(s);
             }
         }
 
         // Teil 3 Bearbeite exclusions
         if (settings.mowExclusionsBoder && settings.exclusionsBorderLaps > 0)
         {
-            for (auto &obs : workEnv.getObstacles())
+            // for (auto &obs : workEnv.getObstacles())
+            // {
+            //     allSlices.push_back(obs);
+            // }
+            if (settings.mowExclusionsBoder && settings.exclusionsBorderLaps > 0)
             {
-                allSlices.push_back(obs);
-            }
-            if (settings.exclusionsBorderLaps > 1)
-            {
-                auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.exclusionsBorderLaps - 1), true);
+                auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.exclusionsBorderLaps), true);
                 for (auto &s : exclusionsSlices)
                 {
                     allSlices.push_back(s);

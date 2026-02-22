@@ -121,12 +121,12 @@ namespace Planner
         return result;
     }
 
-    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing, int maxRings)
+    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing, int maxRings, double initialOffset)
     {
         // Fall A: Keine mowAreas -> Direkt die bewährte Logik auf der Original-Env
         if (env.getMowAreas().empty())
         {
-            return generateRingSlicesInternal(env, env, spacing, maxRings);
+            return generateRingSlicesInternal(env, env, spacing, maxRings, initialOffset);
         }
 
         // Fall B: MowAreas vorhanden
@@ -149,7 +149,7 @@ namespace Planner
             }
 
             // Die bewährte Methode für diese Teil-Umgebung aufrufen
-            std::vector<LineString> areaSlices = generateRingSlicesInternal(env, tempEnv, spacing, maxRings);
+            std::vector<LineString> areaSlices = generateRingSlicesInternal(env, tempEnv, spacing, maxRings, initialOffset);
 
             // Ergebnisse sammeln
             allSlices.insert(allSlices.end(), areaSlices.begin(), areaSlices.end());
@@ -158,14 +158,14 @@ namespace Planner
         return allSlices;
     }
 
-    std::vector<LineString> PathPlanner::generateRingSlicesInternal(const Environment &absBorder, const Environment &env, double spacing, int maxRings)
+    std::vector<LineString> PathPlanner::generateRingSlicesInternal(const Environment &absBorder, const Environment &env, double spacing, int maxRings, double initialOffset)
     {
         using namespace Clipper2Lib;
         std::vector<LineString> result;
         const double scale = 1000.0;
         Paths64 currentLevel;
 
-        // 1. Initiales Setup (Perimeter CCW, Obstacles CW)
+        // 1. Setup (Perimeter & Obstacles) - Wie bisher
         Path64 perimeterPath;
         for (const auto &p : env.getPerimeter().getPoints())
             perimeterPath.push_back(Point64(p.x * scale, p.y * scale));
@@ -192,81 +192,119 @@ namespace Planner
         // 2. Iteratives Schrumpfen
         while (!currentLevel.empty())
         {
-            // Abbruch-Bedingung für die Anzahl der Ringe
             if (maxRings > 0 && currentRingCount >= maxRings)
                 break;
+
+            // LOGIK: Beim ersten Ring nutzen wir den initialOffset.
+            // Wenn dieser 0 ist (Standard für Border-Laps), erhalten wir die Kontur.
+            // Wenn dieser > 0 ist (für distanceToBorder), schrumpfen wir sofort.
+            double currentDelta;
+            if (currentRingCount == 0)
+            {
+                currentDelta = -initialOffset * scale;
+            }
+            else
+            {
+                currentDelta = -spacing * scale;
+            }
 
             ClipperOffset co;
             co.MiterLimit(2.0);
             co.AddPaths(currentLevel, JoinType::Miter, EndType::Polygon);
 
             Paths64 nextLevel;
-            co.Execute(-spacing * scale, nextLevel);
+            co.Execute(currentDelta, nextLevel);
 
-            // --- INTELLIGENTE RETTUNG ---
-            Paths64 areasToRescue;
-            if (nextLevel.empty())
+            // Sonderfall für Spacing 0: Clipper liefert oft identische Pfade zurück.
+            // Um Endlosschleifen zu vermeiden, müssen wir sicherstellen, dass wir weitermachen.
+            if (currentRingCount == 0 && nextLevel.empty() && !currentLevel.empty())
             {
-                areasToRescue = currentLevel;
-            }
-            else
-            {
-                areasToRescue = Difference(currentLevel, InflatePaths(nextLevel, spacing * scale, JoinType::Miter, EndType::Polygon), FillRule::EvenOdd);
+                // Falls Execute(0) fehlschlägt (selten), nimm die bereinigte currentLevel
+                nextLevel = currentLevel;
             }
 
-            if (!areasToRescue.empty())
-            {
-                ClipperOffset rescueOffset;
-                rescueOffset.MiterLimit(2.0);
-                rescueOffset.AddPaths(areasToRescue, JoinType::Miter, EndType::Polygon);
-
-                Paths64 bonusLevel;
-                rescueOffset.Execute(-(spacing * Weights::FINAL_RING_SPACING_FACTOR) * scale, bonusLevel);
-                bool isInsideObstacle = false;
-                for (const auto &bonusPath : bonusLevel)
-                {
-                    LineString bonusRing;
-                    for (const auto &pt : bonusPath)
-                        bonusRing.addPoint({(double)pt.x / scale, (double)pt.y / scale});
-                    for (const auto &obs : absBorder.getObstacles())
-                    {
-                        if (GeometryUtils::isPointInsidePolygon(bonusRing.getPoints()[0], obs))
-                        {
-                            isInsideObstacle = true;
-                        }
-                    }
-                    if (!isInsideObstacle)
-                    {
-                        result.push_back(bonusRing);
-                    }
-                }
-
-                if (nextLevel.empty())
-                    break;
-            }
-
-            // Normal gefundene Ringe zum Ergebnis
+            // --- FILTER & SPEICHERN ---
             for (const auto &path : nextLevel)
             {
+                if (path.empty())
+                    continue;
+
                 LineString ring;
-                bool isInsideObstacle = false;
                 for (const auto &pt : path)
-                {
                     ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
-                }
+
+                // Ring schließen
+                ring.addPoint({(double)path[0].x / scale, (double)path[0].y / scale});
+
+                // Validierung gegen Hindernisse
+                bool isInsideObstacle = false;
+                Point firstPt = ring.getPoints()[0];
                 for (const auto &obs : absBorder.getObstacles())
                 {
-                    if (GeometryUtils::isPointInsidePolygon(ring.getPoints()[0], obs))
+                    if (GeometryUtils::isPointInsidePolygon(firstPt, obs))
                     {
                         isInsideObstacle = true;
+                        break;
                     }
                 }
+
                 if (!isInsideObstacle)
                     result.push_back(ring);
             }
 
+            // --- RETTUNG NUR WENN WIR WIRKLICH SCHRUMPFEN ---
+            if (currentRingCount > 0)
+            {
+                Paths64 areasToRescue;
+                if (nextLevel.empty())
+                {
+                    areasToRescue = currentLevel;
+                }
+                else
+                {
+                    areasToRescue = Difference(currentLevel, InflatePaths(nextLevel, spacing * scale, JoinType::Miter, EndType::Polygon), FillRule::EvenOdd);
+                }
+
+                if (!areasToRescue.empty())
+                {
+                    ClipperOffset rescueOffset;
+                    rescueOffset.MiterLimit(2.0);
+                    rescueOffset.AddPaths(areasToRescue, JoinType::Miter, EndType::Polygon);
+
+                    Paths64 bonusLevel;
+                    rescueOffset.Execute(-(spacing * Weights::FINAL_RING_SPACING_FACTOR) * scale, bonusLevel);
+                    bool isInsideObstacle = false;
+                    for (const auto &bonusPath : bonusLevel)
+                    {
+                        LineString bonusRing;
+                        for (const auto &pt : bonusPath)
+                            bonusRing.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+                        for (const auto &obs : absBorder.getObstacles())
+                        {
+                            if (GeometryUtils::isPointInsidePolygon(bonusRing.getPoints()[0], obs))
+                            {
+                                isInsideObstacle = true;
+                            }
+                        }
+                        if (!isInsideObstacle)
+                        {
+                            result.push_back(bonusRing);
+                        }
+                    }
+
+                    if (nextLevel.empty())
+                        break;
+                }
+            }
+
             currentLevel = nextLevel;
-            currentRingCount++; // Zähler erhöhen
+            currentRingCount++;
+
+            // Sicherheits-Check: Wenn wir bei Spacing 0 feststecken, erzwinge Fortschritt
+            if (currentDelta == 0 && currentRingCount == 1)
+            {
+                // Nach dem 0-Durchgang müssen wir beim nächsten Mal schrumpfen
+            }
 
             if (result.size() > 5000)
                 break;
@@ -274,6 +312,123 @@ namespace Planner
 
         return result;
     }
+
+    // std::vector<LineString> PathPlanner::generateRingSlicesInternal(const Environment &absBorder, const Environment &env, double spacing, int maxRings)
+    // {
+    //     using namespace Clipper2Lib;
+    //     std::vector<LineString> result;
+    //     const double scale = 1000.0;
+    //     Paths64 currentLevel;
+
+    //     // 1. Initiales Setup (Perimeter CCW, Obstacles CW)
+    //     Path64 perimeterPath;
+    //     for (const auto &p : env.getPerimeter().getPoints())
+    //         perimeterPath.push_back(Point64(p.x * scale, p.y * scale));
+
+    //     perimeterPath = SimplifyPath(perimeterPath, 0.01 * scale);
+    //     if (!IsPositive(perimeterPath))
+    //         std::reverse(perimeterPath.begin(), perimeterPath.end());
+    //     currentLevel.push_back(perimeterPath);
+
+    //     for (const auto &obs : env.getObstacles())
+    //     {
+    //         Path64 obstaclePath;
+    //         for (const auto &p : obs.getPoints())
+    //             obstaclePath.push_back(Point64(p.x * scale, p.y * scale));
+
+    //         obstaclePath = SimplifyPath(obstaclePath, 0.01 * scale);
+    //         if (IsPositive(obstaclePath))
+    //             std::reverse(obstaclePath.begin(), obstaclePath.end());
+    //         currentLevel.push_back(obstaclePath);
+    //     }
+
+    //     int currentRingCount = 0;
+
+    //     // 2. Iteratives Schrumpfen
+    //     while (!currentLevel.empty())
+    //     {
+    //         // Abbruch-Bedingung für die Anzahl der Ringe
+    //         if (maxRings > 0 && currentRingCount >= maxRings)
+    //             break;
+
+    //         ClipperOffset co;
+    //         co.MiterLimit(2.0);
+    //         co.AddPaths(currentLevel, JoinType::Miter, EndType::Polygon);
+
+    //         Paths64 nextLevel;
+    //         co.Execute(-spacing * scale, nextLevel);
+
+    //         // --- INTELLIGENTE RETTUNG ---
+    //         Paths64 areasToRescue;
+    //         if (nextLevel.empty())
+    //         {
+    //             areasToRescue = currentLevel;
+    //         }
+    //         else
+    //         {
+    //             areasToRescue = Difference(currentLevel, InflatePaths(nextLevel, spacing * scale, JoinType::Miter, EndType::Polygon), FillRule::EvenOdd);
+    //         }
+
+    //         if (!areasToRescue.empty())
+    //         {
+    //             ClipperOffset rescueOffset;
+    //             rescueOffset.MiterLimit(2.0);
+    //             rescueOffset.AddPaths(areasToRescue, JoinType::Miter, EndType::Polygon);
+
+    //             Paths64 bonusLevel;
+    //             rescueOffset.Execute(-(spacing * Weights::FINAL_RING_SPACING_FACTOR) * scale, bonusLevel);
+    //             bool isInsideObstacle = false;
+    //             for (const auto &bonusPath : bonusLevel)
+    //             {
+    //                 LineString bonusRing;
+    //                 for (const auto &pt : bonusPath)
+    //                     bonusRing.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+    //                 for (const auto &obs : absBorder.getObstacles())
+    //                 {
+    //                     if (GeometryUtils::isPointInsidePolygon(bonusRing.getPoints()[0], obs))
+    //                     {
+    //                         isInsideObstacle = true;
+    //                     }
+    //                 }
+    //                 if (!isInsideObstacle)
+    //                 {
+    //                     result.push_back(bonusRing);
+    //                 }
+    //             }
+
+    //             if (nextLevel.empty())
+    //                 break;
+    //         }
+
+    //         // Normal gefundene Ringe zum Ergebnis
+    //         for (const auto &path : nextLevel)
+    //         {
+    //             LineString ring;
+    //             bool isInsideObstacle = false;
+    //             for (const auto &pt : path)
+    //             {
+    //                 ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+    //             }
+    //             for (const auto &obs : absBorder.getObstacles())
+    //             {
+    //                 if (GeometryUtils::isPointInsidePolygon(ring.getPoints()[0], obs))
+    //                 {
+    //                     isInsideObstacle = true;
+    //                 }
+    //             }
+    //             if (!isInsideObstacle)
+    //                 result.push_back(ring);
+    //         }
+
+    //         currentLevel = nextLevel;
+    //         currentRingCount++; // Zähler erhöhen
+
+    //         if (result.size() > 5000)
+    //             break;
+    //     }
+
+    //     return result;
+    // }
 
     std::vector<LineString> PathPlanner::filterRings(const std::vector<LineString> &rings, bool filterForObstacle)
     {
@@ -359,6 +514,28 @@ namespace Planner
                         result.path.addPoint(bypass[i]);
                     }
 
+                    // Wenn es ein Polygon ist, schauen wir, wo A* uns wirklich abgesetzt hat.
+                    // Das A*-Ende ist bypass.back().
+                    if (next.isPolygon)
+                    {
+                        Point actualArrival = bypass.back();
+                        double minD = 1e18;
+                        size_t bestIdx = 0;
+                        const auto &pts = slices[next.index].getPoints();
+
+                        for (size_t i = 0; i < pts.size(); ++i)
+                        {
+                            double d = GeometryUtils::calculateDistance(actualArrival, pts[i]);
+                            if (d < minD)
+                            {
+                                minD = d;
+                                bestIdx = i;
+                            }
+                        }
+                        // Wir überschreiben den Einstiegspunkt mit dem Punkt, an dem wir real angekommen sind
+                        next.entryPointIdx = bestIdx;
+                    }
+
                     visited[next.index] = true;
                     addSliceToPath(result.path, slices[next.index], next);
                 }
@@ -422,8 +599,14 @@ namespace Planner
             size_t n = pts.size();
             size_t startIdx = best.entryPointIdx;
 
+            Point lastInPath = path.getPoints().back();
+            Point entryPt = pts[best.entryPointIdx];
+
+            // Wenn wir schon exakt auf dem Punkt stehen, fangen wir beim nächsten an
+            size_t i = (GeometryUtils::calculateDistance(lastInPath, entryPt) < 0.001) ? 1 : 0;
+
             // Einmal komplett im Kreis laufen
-            for (size_t i = 0; i <= n; ++i)
+            for (; i <= n; ++i)
             {
                 // Modulo sorgt dafür, dass wir nach dem letzten Punkt wieder bei 0 landen
                 size_t currentIdx = (startIdx + i) % n;

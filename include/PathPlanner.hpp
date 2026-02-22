@@ -57,7 +57,7 @@ namespace Planner
         };
 
         static std::vector<LineString> generateSlices(const Environment &env, double spacing);
-        static std::vector<LineString> generateRingSlices(const Environment &env, double spacing, int maxRings = 0);
+        static std::vector<LineString> generateRingSlices(const Environment &env, double spacing, int maxRings = 0, double initialOffset = 0.0);
         static std::vector<LineString> filterRings (const std::vector<LineString> &rings, bool filterForObstacle);
         static PlanningResult connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
         static bool isPathClear(Point a, Point b, const Environment &env);
@@ -74,7 +74,7 @@ namespace Planner
 
         static BestNextSegment findBestNext(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited, const Environment &env);
         static BestNextSegment findBestNextFallback(Point currentPos, const std::vector<LineString> &slices, const std::vector<bool> &visited);
-        static std::vector<LineString> generateRingSlicesInternal(const Environment &absBorder, const Environment &env, double spacing, int maxRings);
+        static std::vector<LineString> generateRingSlicesInternal(const Environment &absBorder, const Environment &env, double spacing, int maxRings, double initialOffset);
         static void addSliceToPath(LineString &path, const LineString &slice, BestNextSegment best);
         static std::vector<Point> getNavigationNodes(const Environment &env);
         static std::vector<NavNode> getExtendedNavNodes(const Environment &env);
