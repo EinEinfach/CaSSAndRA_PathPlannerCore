@@ -427,6 +427,34 @@ namespace Planner
         return true; // Die Linie schwebt völlig frei im Inneren des Polygons
     }
 
+    bool GeometryUtils::isPolygonIntersectingPolygon(const Polygon &poly1, const Polygon &poly2) {
+        auto pts1 = poly1.getPoints();
+        auto pts2 = poly2.getPoints();
+        if (pts1.size() < 3 || pts2.size() < 3) return false;
+        bool polygonIntersecting = false;
+        for (size_t i = 0; i < pts1.size(); ++i) {
+            if (isLineIntersectingPolygon(pts1[i], pts1[(i + 1) % pts1.size()], poly2)) {
+                polygonIntersecting = true;
+                break;
+            }
+        }
+        return polygonIntersecting;
+    }
+
+    bool GeometryUtils::isPolygonCoveredByPolygon(const Polygon &poly1, const Polygon &poly2) {
+        auto pts1 = poly1.getPoints();
+        auto pts2 = poly2.getPoints();
+        if (pts1.size() < 3 || pts2.size() < 3) return false;
+        bool lineCovered = false;
+        for (size_t i = 0; i < pts1.size(); ++i) {
+            lineCovered = isLineCoveredByPolygon(pts1[i], pts1[(i + 1) % pts1.size()], poly2);
+            if (!lineCovered) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     double GeometryUtils::calculateDistance(Point a, Point b)
     {
         return std::sqrt(std::pow(b.x - a.x, 2) + std::pow(b.y - a.y, 2));

@@ -121,7 +121,44 @@ namespace Planner
         return result;
     }
 
-    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &env, double spacing, int maxRings)
+    std::vector<LineString> PathPlanner::generateRingSlicesMultiple(const Environment &env, double spacing, int maxRings)
+    {
+        // Fall A: Keine mowAreas -> Direkt die bewährte Logik auf der Original-Env
+        if (env.getMowAreas().empty())
+        {
+            return generateRingSlices(env, env, spacing, maxRings);
+        }
+
+        // Fall B: MowAreas vorhanden
+        std::vector<LineString> allSlices;
+
+        for (const auto &area : env.getMowAreas())
+        {
+            // Wir bauen eine temporäre Environment für diese eine MowArea
+            // Der neue Perimeter ist die MowArea selbst
+            Environment tempEnv(area);
+
+            // Die globalen Hindernisse übernehmen
+            for (const auto &obs : env.getObstacles())
+            {
+                if (GeometryUtils::isPolygonCoveredByPolygon(obs, tempEnv.getPerimeter()) ||
+                    GeometryUtils::isPolygonIntersectingPolygon(obs, tempEnv.getPerimeter()))
+                {
+                    tempEnv.addObstacle(obs);
+                }
+            }
+
+            // Die bewährte Methode für diese Teil-Umgebung aufrufen
+            std::vector<LineString> areaSlices = generateRingSlices(env, tempEnv, spacing, maxRings);
+
+            // Ergebnisse sammeln
+            allSlices.insert(allSlices.end(), areaSlices.begin(), areaSlices.end());
+        }
+
+        return allSlices;
+    }
+
+    std::vector<LineString> PathPlanner::generateRingSlices(const Environment &absBorder, const Environment &env, double spacing, int maxRings)
     {
         using namespace Clipper2Lib;
         std::vector<LineString> result;
@@ -185,13 +222,23 @@ namespace Planner
 
                 Paths64 bonusLevel;
                 rescueOffset.Execute(-(spacing * Weights::FINAL_RING_SPACING_FACTOR) * scale, bonusLevel);
-
+                bool isInsideObstacle = false;
                 for (const auto &bonusPath : bonusLevel)
                 {
                     LineString bonusRing;
                     for (const auto &pt : bonusPath)
                         bonusRing.addPoint({(double)pt.x / scale, (double)pt.y / scale});
-                    result.push_back(bonusRing);
+                    for (const auto &obs : absBorder.getObstacles())
+                    {
+                        if (GeometryUtils::isPointInsidePolygon(bonusRing.getPoints()[0], obs))
+                        {
+                            isInsideObstacle = true;
+                        }
+                    }
+                    if (!isInsideObstacle)
+                    {
+                        result.push_back(bonusRing);
+                    }
                 }
 
                 if (nextLevel.empty())
@@ -200,10 +247,21 @@ namespace Planner
 
             // Normal gefundene Ringe zum Ergebnis
             for (const auto &path : nextLevel)
+            {
+                LineString ring;
+                bool isInsideObstacle = false;
+                for (const auto &pt : path)
                 {
-                    LineString ring;
-                    for (const auto &pt : path)
-                        ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+                    ring.addPoint({(double)pt.x / scale, (double)pt.y / scale});
+                }
+                for (const auto &obs : absBorder.getObstacles())
+                {
+                    if (GeometryUtils::isPointInsidePolygon(ring.getPoints()[0], obs))
+                    {
+                        isInsideObstacle = true;
+                    }
+                }
+                if (!isInsideObstacle)
                     result.push_back(ring);
             }
 

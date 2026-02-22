@@ -76,6 +76,12 @@ namespace Planner
         // Prüft ob die Linie komplet im Polygon (ohne Kante)
         static bool isLineInsidePolygon(Point p1, Point p2, const Polygon &poly);
 
+        // Prüft ob ein Polygon schneidet ein anderes
+        static bool isPolygonIntersectingPolygon(const Polygon &poly1, const Polygon &poly2);
+
+        // Prüft ob ein Polygon komplet in einem anderen Polygon liegt
+        static bool isPolygonCoveredByPolygon(const Polygon &poly1, const Polygon &poly2);
+
         // Berechne Distanz zwischen zwei Punkten
         static double calculateDistance(Point a, Point b);
 

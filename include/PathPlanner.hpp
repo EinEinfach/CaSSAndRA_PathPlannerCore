@@ -57,7 +57,8 @@ namespace Planner
         };
 
         static std::vector<LineString> generateSlices(const Environment &env, double spacing);
-        static std::vector<LineString> generateRingSlices(const Environment &env, double spacing, int maxRings = 0);
+        static std::vector<LineString> generateRingSlicesMultiple(const Environment &env, double spacing, int maxRings = 0);
+        static std::vector<LineString> generateRingSlices(const Environment &absBorder, const Environment &env, double spacing, int maxRings = 0);
         static std::vector<LineString> filterRings (const std::vector<LineString> &rings, bool filterForObstacle);
         static PlanningResult connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
         static bool isPathClear(Point a, Point b, const Environment &env);
