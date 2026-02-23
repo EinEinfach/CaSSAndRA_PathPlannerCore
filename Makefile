@@ -1,77 +1,72 @@
 # Compiler Einstellungen
 CXX = clang++
-# Wir bleiben bei C++20, da Apple Clang C++23 noch nicht voll unterstützt
-# Füge -g unbedingt hinzu!
 CXXFLAGS = -std=c++20 -g3 -O0 -Wall -Wextra -Iinclude -I/opt/homebrew/include -MMD -MP
 
 # Pfade
 SRC_DIR = src
+CLIPPER_DIR = src/clipper2
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/CoveragePlanner
 
-# Quellen finden
-# SRCS = main.cpp $(wildcard $(SRC_DIR)/*.cpp)
-ALL_SRCS = $(wildcard $(SRC_DIR)/*.cpp)
-# Alle .cpp Dateien außer dem Wrapper für die Standalone-App
-SRCS = main.cpp $(filter-out $(SRC_DIR)/python_wrapper.cpp, $(ALL_SRCS))
+# 1. Liste alle Quellen mit ihren tatsächlichen Pfaden auf
+CORE_SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+CLIPPER_SRCS = $(wildcard $(CLIPPER_DIR)/*.cpp)
+ALL_SRCS = main.cpp $(CORE_SRCS) $(CLIPPER_SRCS)
 
-# Objektdateien (build/main.o, build/Geometry.o, etc.)
-OBJS = $(addprefix $(BUILD_DIR)/, $(notdir $(SRCS:.cpp=.o)))
-
-# Dateiabhängigkeiten (.d Dateien), damit Änderungen an .hpp erkannt werden
+# 2. Erzeuge Objekt-Pfade, die die Unterordner-Struktur im Build-Ordner spiegeln
+# Dies verhindert Namenskollisionen und "No rule to make target" Fehler
+OBJS = $(ALL_SRCS:%.cpp=$(BUILD_DIR)/%.o)
 DEPS = $(OBJS:.o=.d)
 
+# 3. Filter für die verschiedenen Targets
+# Standalone braucht kein python_wrapper
+STANDALONE_OBJS = $(filter-out $(BUILD_DIR)/$(SRC_DIR)/python_wrapper.o, $(OBJS))
+# Python braucht kein main.o
+PYTHON_OBJS = $(filter-out $(BUILD_DIR)/main.o $(BUILD_DIR)/$(SRC_DIR)/python_wrapper.o, $(OBJS))
+
 # Standard-Target
-all: $(BUILD_DIR) $(TARGET)
+all: $(TARGET)
 
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+# Linken der Standalone-App
+$(TARGET): $(STANDALONE_OBJS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(STANDALONE_OBJS)
 
-# Linken
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
-
-# Kompilieren von main.cpp (liegt im Wurzelverzeichnis)
-$(BUILD_DIR)/main.o: main.cpp
+# Regel für Dateien im Wurzelverzeichnis (main.cpp)
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Kompilieren der Dateien aus src/
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+# Regel für Dateien in src/ und src/clipper2/
+$(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Binde die .d Dateien ein, falls sie existieren
 -include $(DEPS)
 
 # Aufräumen
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -f planner_module*.so
 
-.PHONY: all clean
+.PHONY: all clean test python_module
 
 # --- Test Konfiguration ---
 TEST_DIR = tests
 GTEST_FLAGS = -L/opt/homebrew/lib -lgtest -lgtest_main -lpthread
 GTEST_INC = -I/opt/homebrew/include
 
-# Alle Testdateien finden
-TEST_SRCS = $(wildcard $(TEST_DIR)/*.cpp)
-
-# Target für die Tests
-test: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
-	$(CXX) $(CXXFLAGS) $(GTEST_INC) $(TEST_SRCS) $(filter-out $(BUILD_DIR)/main.o, $(OBJS)) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
+test: $(PYTHON_OBJS)
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(GTEST_INC) $(wildcard $(TEST_DIR)/*.cpp) \
+	$(PYTHON_OBJS) -o $(BUILD_DIR)/run_tests $(GTEST_FLAGS)
 	./$(BUILD_DIR)/run_tests
 
 ######       PYTHON_MODULE      ######
-# Pfad zur venv (relativ zum Makefile)
 VENV_BIN = .venv/bin
-# 1. Die Pfade holen (hast du wahrscheinlich schon)
 PY_INC = $(shell $(VENV_BIN)/python3 -m pybind11 --includes)
 PY_SUFFIX = $(shell $(VENV_BIN)/python3-config --extension-suffix)
 
-# 2. Das korrigierte Target
-# Wir nehmen alle OBJS (außer main.o), aber kompilieren den Wrapper direkt mit
-python_module: $(BUILD_DIR) $(filter-out $(BUILD_DIR)/main.o, $(OBJS))
+python_module: $(PYTHON_OBJS)
 	$(CXX) $(CXXFLAGS) $(PY_INC) -shared -undefined dynamic_lookup \
-	$(filter-out $(BUILD_DIR)/main.o, $(OBJS)) \
-	src/python_wrapper.cpp \
+	$(PYTHON_OBJS) src/python_wrapper.cpp \
 	-o planner_module$(PY_SUFFIX)

@@ -57,7 +57,8 @@ TEST_F(PathServiceTest, OnlyExclusionMowing)
     settings.offset = 1.0;
 
     Environment env = createSquareWithHole();
-    auto result = service.computeFullTask(env, settings, {0, 0});
+    Point startPos = {0, 0};
+    auto result = service.computeFullTask(env, settings, startPos);
 
     // Wir erwarten 1 Slice (das eine Hindernis)
     EXPECT_EQ(result.slices.size(), 1UL);
@@ -74,7 +75,8 @@ TEST_F(PathServiceTest, PatternSquaresGeneratesDoubleSlices)
     settings.distanceToBorder = 0.0; // Kein Shrinking für diesen Test
 
     Environment env = createSimpleSquare();
-    auto result = service.computeFullTask(env, settings, {0, 0});
+    Point startPos = {0, 0};
+    auto result = service.computeFullTask(env, settings, startPos);
 
     // Bei 10x10 und 2.0 Offset erwarten wir ca. 5 Linien pro Richtung = ~10 Slices
     EXPECT_GT(result.slices.size(), 6UL);
@@ -92,8 +94,9 @@ TEST_F(PathServiceTest, ShrinkingCreatesIslands)
     // Hantel-Form: Zwei 10x10 Quadrate verbunden durch einen 1m schmalen Steg
     Polygon p({{0, 0}, {10, 0}, {10, 4.5}, {12, 4.5}, {12, 0}, {22, 0}, {22, 10}, {12, 10}, {12, 5.5}, {10, 5.5}, {10, 10}, {0, 10}});
     Environment env(p);
+    Point startPos = {0, 0};
 
-    auto result = service.computeFullTask(env, settings, {0, 0});
+    auto result = service.computeFullTask(env, settings, startPos);
 
     // Bei 4.0m distanceToBorder muss der 1m Steg verschwinden.
     // Es sollten 2 separate Insel-Environments intern verarbeitet worden sein.
@@ -111,7 +114,8 @@ TEST_F(PathServiceTest, RotationIntegrity)
     settings.offset = 1.0;
 
     Environment env = createSimpleSquare();
-    auto result = service.computeFullTask(env, settings, {0, 0});
+    Point startPos = {0, 0};
+    auto result = service.computeFullTask(env, settings, startPos);
 
     // Prüfen, ob der Pfad existiert. Die Korrektheit der Rotation
     // ist schwer über EQ zu prüfen, aber wir checken ob Punkte außerhalb
