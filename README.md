@@ -5,7 +5,7 @@
 ## 🇬🇧 English
 
 ## Overview
-![Path Planner Preview](docs/preview.png)
+![Path Planner Preview](doc/preview.png)
 
 This project provides a high-performance path planning engine written in C++, specifically designed for autonomous robotic lawnmowers (inspired by the CaSSAndRA project).
 
@@ -43,7 +43,7 @@ It reads a `map.geojson` and calculates the path directly.
 #### Compilation Example
 
 ```bash
-g++ -O3 -std=c++20 -Iinclude -I/opt/homebrew/include main.cpp PathPlanner.cpp -o planner_test
+clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_test
 ./planner_test
 ```
 
@@ -112,7 +112,7 @@ Es liest eine `map.geojson` ein und berechnet den Pfad direkt.
 #### Beispiel-Kompilierung
 
 ```bash
-g++ -O3 -std=c++20 -Iinclude -I/opt/homebrew/include main.cpp PathPlanner.cpp -o planner_test
+clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_test
 ./planner_test
 ```
 
