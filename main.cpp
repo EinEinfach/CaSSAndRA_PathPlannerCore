@@ -19,7 +19,7 @@ int main()
 
     Point startPos = {1.0497111925, -1.8987146778000001};//{0.0, 0.0};
     Planner::PathSettings settings;
-    settings.pattern = "lines";
+    settings.pattern = "rings";
     settings.offset = 0.5;
     settings.angle = 0.5;
     settings.distanceToBorder = 1.0;

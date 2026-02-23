@@ -43,6 +43,24 @@ Available Commands
 
 - **make python_module: Compiles the C++ core as a Python-importable .so module using pybind11.**
 
+### Build & Development (CMake)
+The projet also includes CMake to build the project across different platforms (macOS, Linux/Raspberry Pi).
+
+1. build using your global python interpreter
+
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+2. build using your virtual environment (venv)
+```bash
+cmake -B build -DPython_EXECUTABLE=$(pwd)/.venv/bin/python3
+cd build
+make
+```
+
 ### Standalone (C++)
 
 To test the planner without Python, use the provided `main.cpp` debug script.  
@@ -122,6 +140,23 @@ Verfügbare Befehle
 - **make test: Kompiliert und startet sofort den Stand-alone-Debug-Test.**
 
 - **make python_module: Kompiliert den C++ Kern als Python-Modul (.so) mittels pybind11.**
+
+### Build & Entwicklung (CMake)
+Das Projekt enthält auch CMake um das Projekt auf unterschiedlichen Platformen bauen zu können(macOS, Linux/Raspberry Pi).
+
+1. bauen mit globalen python Interpreter
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+2. bauen mit virtualer Umgebung (venv)
+```bash
+cmake -B build -DPython_EXECUTABLE=$(pwd)/.venv/bin/python3
+cd build
+make
+```
 
 ### Eigenständig (C++)
 

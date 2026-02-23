@@ -62,7 +62,7 @@ test: $(PYTHON_OBJS)
 	./$(BUILD_DIR)/run_tests
 
 ######       PYTHON_MODULE      ######
-VENV_BIN = .venv/bin
+VENV_BIN ?= .venv/bin
 PY_INC = $(shell $(VENV_BIN)/python3 -m pybind11 --includes)
 PY_SUFFIX = $(shell $(VENV_BIN)/python3-config --extension-suffix)
 
