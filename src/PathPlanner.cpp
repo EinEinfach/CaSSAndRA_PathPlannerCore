@@ -170,9 +170,9 @@ namespace Planner
         for (const auto &p : env.getPerimeter().getPoints())
             perimeterPath.push_back(Point64(p.x * scale, p.y * scale));
 
-        perimeterPath = SimplifyPath(perimeterPath, 0.01 * scale);
-        if (!IsPositive(perimeterPath))
-            std::reverse(perimeterPath.begin(), perimeterPath.end());
+        // perimeterPath = SimplifyPath(perimeterPath, 0.01 * scale);
+        // if (!IsPositive(perimeterPath))
+        //     std::reverse(perimeterPath.begin(), perimeterPath.end());
         currentLevel.push_back(perimeterPath);
 
         for (const auto &obs : env.getObstacles())
@@ -181,9 +181,9 @@ namespace Planner
             for (const auto &p : obs.getPoints())
                 obstaclePath.push_back(Point64(p.x * scale, p.y * scale));
 
-            obstaclePath = SimplifyPath(obstaclePath, 0.01 * scale);
-            if (IsPositive(obstaclePath))
-                std::reverse(obstaclePath.begin(), obstaclePath.end());
+            // obstaclePath = SimplifyPath(obstaclePath, 0.01 * scale);
+            // if (IsPositive(obstaclePath))
+            //     std::reverse(obstaclePath.begin(), obstaclePath.end());
             currentLevel.push_back(obstaclePath);
         }
 
@@ -508,34 +508,49 @@ namespace Planner
 
                     // Berechne Umweg um Hindernisse
                     std::vector<Point> bypass = findAStarPath(currentPos, goal, env, result.debugLinesSec);
-
-                    for (size_t i = 1; i < bypass.size(); ++i)
+                    if (bypass.empty())
                     {
-                        result.path.addPoint(bypass[i]);
+                        // A* hat keinen Pfad gefunden!
+                        // Wir überspringen dieses Slice komplett, um nicht durch Hindernisse zu fahren.
+                        visited[next.index] = true;
+                        std::stringstream ss;
+                        ss << "WARN: No path found to slice " << next.index << ". Skipping.";
+                        logDebug(ss.str()); 
+
+                        // Wir setzen currentPos NICHT neu, wir bleiben wo wir sind und suchen das übernächste
+                        continue;
+                        // // Sicherheitsnetz: Wenn A* versagt, nimm die Luftlinie zum Ziel
+                        // result.path.addPoint(goal);
                     }
-
-                    // Wenn es ein Polygon ist, schauen wir, wo A* uns wirklich abgesetzt hat.
-                    // Das A*-Ende ist bypass.back().
-                    if (next.isPolygon)
+                    else
                     {
-                        Point actualArrival = bypass.back();
-                        double minD = 1e18;
-                        size_t bestIdx = 0;
-                        const auto &pts = slices[next.index].getPoints();
-
-                        for (size_t i = 0; i < pts.size(); ++i)
+                        for (size_t i = 1; i < bypass.size(); ++i)
                         {
-                            double d = GeometryUtils::calculateDistance(actualArrival, pts[i]);
-                            if (d < minD)
-                            {
-                                minD = d;
-                                bestIdx = i;
-                            }
+                            result.path.addPoint(bypass[i]);
                         }
-                        // Wir überschreiben den Einstiegspunkt mit dem Punkt, an dem wir real angekommen sind
-                        next.entryPointIdx = bestIdx;
-                    }
 
+                        // Wenn es ein Polygon ist, schauen wir, wo A* uns wirklich abgesetzt hat.
+                        // Das A*-Ende ist bypass.back().
+                        if (next.isPolygon)
+                        {
+                            Point actualArrival = bypass.back();
+                            double minD = 1e18;
+                            size_t bestIdx = 0;
+                            const auto &pts = slices[next.index].getPoints();
+
+                            for (size_t i = 0; i < pts.size(); ++i)
+                            {
+                                double d = GeometryUtils::calculateDistance(actualArrival, pts[i]);
+                                if (d < minD)
+                                {
+                                    minD = d;
+                                    bestIdx = i;
+                                }
+                            }
+                            // Wir überschreiben den Einstiegspunkt mit dem Punkt, an dem wir real angekommen sind
+                            next.entryPointIdx = bestIdx;
+                        }
+                    }
                     visited[next.index] = true;
                     addSliceToPath(result.path, slices[next.index], next);
                 }
@@ -557,12 +572,12 @@ namespace Planner
         if (len < epsilon)
             return true;
 
-        // Point testA = {a.x + (dir.x / len) * epsilon, a.y + (dir.y / len) * epsilon};
-        // Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
+        Point testA = {a.x + (dir.x / len) * epsilon, a.y + (dir.y / len) * epsilon};
+        Point testB = {b.x - (dir.x / len) * epsilon, b.y - (dir.y / len) * epsilon};
 
         // Prüfe ob innerhalb des Perimeters
         auto &perimeter = env.getPerimeter();
-        if (!GeometryUtils::isLineCoveredByPolygon(a, b, perimeter))
+        if (!GeometryUtils::isLineCoveredByPolygon(testA, testB, perimeter))
         {
             return false;
         }
@@ -571,7 +586,7 @@ namespace Planner
         for (const auto &obs : env.getObstacles())
         {
             // 1. Wird die Kante echt geschnitten? (Der "Durchschuss")
-            if (GeometryUtils::isLineIntersectingPolygon(a, b, obs))
+            if (GeometryUtils::isLineIntersectingPolygon(testA, testB, obs))
             {
                 return false;
             }

@@ -483,7 +483,7 @@ namespace Planner
             // Punkte umkehren
             auto pts = poly.getPoints();
             std::reverse(pts.begin(), pts.end());
-            poly.setPoints(pts); // Angenommen, Polygon hat setPoints
+            poly.setPoints(pts); 
         }
     }
 }

@@ -2,7 +2,7 @@
 CXX = clang++
 # Wir bleiben bei C++20, da Apple Clang C++23 noch nicht voll unterstützt
 # Füge -g unbedingt hinzu!
-CXXFLAGS = -std=c++20 -g3 -O0 -Wall -Wextra -Iinclude -MMD -MP
+CXXFLAGS = -std=c++20 -g3 -O0 -Wall -Wextra -Iinclude -I/opt/homebrew/include -MMD -MP
 
 # Pfade
 SRC_DIR = src

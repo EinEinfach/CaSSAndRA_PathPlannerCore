@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include "PathService.hpp"
 #include "Environment.hpp"
 #include "Geometry.hpp"
@@ -11,25 +13,75 @@ using Planner::PathPlanner;
 using Planner::Point;
 using Planner::Polygon;
 using Planner::Visualizer;
+using json = nlohmann::json;
+
+// Funktion zum Einlesen der GeoJSON
+Environment loadEnvironmentFromGeoJSON(const std::string &filename)
+{
+    std::ifstream file(filename);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Konnte Datei nicht öffnen: " + filename);
+    }
+
+    json j;
+    file >> j;
+
+    Polygon perimeter;
+    std::vector<Polygon> exclusions;
+
+    for (auto &feature : j["features"])
+    {
+        std::string name = feature["properties"]["name"];
+        auto &geometry = feature["geometry"];
+
+        if (name == "perimeter" && geometry["type"] == "Polygon")
+        {
+            // GeoJSON Polygons haben ein Array von Arrays (Ring + Holes)
+            // Wir nehmen den äußeren Ring [0]
+            for (auto &coord : geometry["coordinates"][0])
+            {
+                perimeter.addPoint({coord[0].get<double>(), coord[1].get<double>()});
+            }
+        }
+        else if (name == "exclusion" && geometry["type"] == "Polygon")
+        {
+            Polygon ex;
+            for (auto &coord : geometry["coordinates"][0])
+            {
+                ex.addPoint({coord[0].get<double>(), coord[1].get<double>()});
+            }
+            exclusions.push_back(ex);
+        }
+    }
+
+    // Environment erstellen
+    Environment env(perimeter);
+    for (const auto &ex : exclusions)
+    {
+        env.addObstacle(ex);
+    }
+
+    return env;
+}
 
 int main()
 {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
-    Point startPos = {0.0, 0.0};
-
+    Point startPos = {1.0497111925, -1.8987146778000001};//{0.0, 0.0};
     Planner::PathSettings settings;
-    settings.pattern = "lines";
-    settings.offset = 0.2;
+    settings.pattern = "squares";
+    settings.offset = 0.5;
     settings.angle = 0.0;
     settings.distanceToBorder = 0.5;
-    settings.mowArea = true;
+    settings.mowArea = false;
     settings.mowBorder = false;
     settings.mowBorderCcw = false;
     settings.borderLaps = 1;
-    settings.mowExclusionsBoder = false;
-    settings.mowExclusionsBorderCcw= false;
-    settings.exclusionsBorderLaps = 4;
+    settings.mowExclusionsBoder = true;
+    settings.mowExclusionsBorderCcw = false;
+    settings.exclusionsBorderLaps = 1;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0}, {0.0, 10.0}};
@@ -50,7 +102,7 @@ int main()
     Polygon obstacle4 = {{2.0, 2.0}, {4.0, 2.0}, {4.0, 4.0}, {2.0, 4.0}};
     myEnv2.addObstacle(obstacle4);
 
-    auto myEnv = myEnv1;
+    auto myEnv = loadEnvironmentFromGeoJSON("big map.json");
 
     Planner::PathService service;
     std::cout << "Starte PathService..." << std::endl;
