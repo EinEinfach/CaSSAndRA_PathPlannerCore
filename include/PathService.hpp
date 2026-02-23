@@ -28,7 +28,7 @@ namespace Planner
         static bool enableDebugLogs;
 
         // Die Hauptmethode: Verarbeitet die Env zu einem fertigen Pfad
-        PathPlanner::PlanningResult computeFullTask(const Environment &rawEnv, const PathSettings &settings, const Point &startPos);
+        PathPlanner::PlanningResult computeFullTask(const Environment &rawEnv, const PathSettings &settings, Point &startPos);
 
         std::string getVersion();
 

@@ -21,13 +21,13 @@ int main()
     Planner::PathSettings settings;
     settings.pattern = "lines";
     settings.offset = 0.5;
-    settings.angle = 0.0;
+    settings.angle = 0.5;
     settings.distanceToBorder = 1.0;
     settings.mowArea = true;
     settings.mowBorder = true;
     settings.mowBorderCcw = false;
     settings.borderLaps = 2;
-    settings.mowExclusionsBoder = false;
+    settings.mowExclusionsBoder = true;
     settings.mowExclusionsBorderCcw = false;
     settings.exclusionsBorderLaps = 2;
 

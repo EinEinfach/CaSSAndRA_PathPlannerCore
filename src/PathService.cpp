@@ -1,4 +1,5 @@
 #include "PathService.hpp"
+#include <iostream>
 
 namespace Planner
 {
@@ -6,12 +7,14 @@ namespace Planner
         return version;
     }
 
-    PathPlanner::PlanningResult PathService::computeFullTask(const Environment &rawEnv, const PathSettings &settings, const Point &startPos)
+    PathPlanner::PlanningResult PathService::computeFullTask(const Environment &rawEnv, const PathSettings &settings, Point &startPos)
     {
         // Kopie der Env für Bearbeitung (Rotation)
         Environment workEnv = rawEnv;
 
         workEnv.rotate(-settings.angle);
+        startPos = GeometryUtils::rotatePoint(startPos, -settings.angle);
+
         std::vector<LineString> allSlices; // Hier packen wir alles was abgefahren sein muss
 
         // Teil 1 Bearbeite die mow area
