@@ -32,6 +32,17 @@ It solves the **Complete Coverage Path Planning (CCPP)** problem, allowing a rob
 
 ## Usage
 
+### Build & Development (Makefile)
+The project includes a Makefile (tested on macOS) to simplify the build process for different targets.
+
+Available Commands
+
+- **make: Compiles the standard standalone version.**
+
+- **make test: Compiles and immediately runs the standalone debug test.**
+
+- **make python_module: Compiles the C++ core as a Python-importable .so module using pybind11.**
+
 ### Standalone (C++)
 
 To test the planner without Python, use the provided `main.cpp` debug script.  
@@ -100,6 +111,17 @@ Es löst das Problem der vollständigen Flächenabdeckung
 ---
 
 ## Benutzung
+
+### Build & Entwicklung (Makefile)
+Das Projekt enthält ein Makefile (getestet unter macOS), um die verschiedenen Build-Ziele einfach zu verwalten.
+
+Verfügbare Befehle
+
+- **make: Kompiliert die standardmäßige Stand-alone-Version.**
+
+- **make test: Kompiliert und startet sofort den Stand-alone-Debug-Test.**
+
+- **make python_module: Kompiliert den C++ Kern als Python-Modul (.so) mittels pybind11.**
 
 ### Eigenständig (C++)
 
