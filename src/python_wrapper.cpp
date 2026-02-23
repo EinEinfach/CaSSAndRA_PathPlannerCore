@@ -49,8 +49,10 @@ PYBIND11_MODULE(planner_module, m)
         .def_readwrite("mowArea", &PathSettings::mowArea)
         .def_readwrite("mowBorder", &PathSettings::mowBorder)
         .def_readwrite("borderLaps", &PathSettings::borderLaps)
+        .def_readwrite("mowBorderCcw", &PathSettings::mowBorderCcw)
         .def_readwrite("mowExclusionsBoder", &PathSettings::mowExclusionsBoder)
         .def_readwrite("exclusionsBorderLaps", &PathSettings::exclusionsBorderLaps)
+        .def_readwrite("mowExclusionsBorderCcw", &PathSettings::mowExclusionsBorderCcw)
         .def_readwrite("pattern", &PathSettings::pattern);
 
     // 6. PlanningResult
@@ -61,5 +63,6 @@ PYBIND11_MODULE(planner_module, m)
     // 7. PathService
     py::class_<PathService>(m, "PathService")
         .def(py::init<>())
-        .def("computeFullTask", &PathService::computeFullTask);
+        .def("computeFullTask", &PathService::computeFullTask)
+        .def("getVersion", &PathService::getVersion);
 }

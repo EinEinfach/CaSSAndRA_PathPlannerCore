@@ -2,6 +2,10 @@
 
 namespace Planner
 {
+    std::string PathService::getVersion() {
+        return version;
+    }
+
     PathPlanner::PlanningResult PathService::computeFullTask(const Environment &rawEnv, const PathSettings &settings, const Point &startPos)
     {
         // Kopie der Env für Bearbeitung (Rotation)

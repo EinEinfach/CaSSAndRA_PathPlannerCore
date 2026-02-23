@@ -30,7 +30,10 @@ namespace Planner
         // Die Hauptmethode: Verarbeitet die Env zu einem fertigen Pfad
         PathPlanner::PlanningResult computeFullTask(const Environment &rawEnv, const PathSettings &settings, const Point &startPos);
 
+        std::string getVersion();
+
     private:
+        std::string version = "1.0";
         // Interne Hilfsmethoden zur Strukturierung
         void rotateResult(PathPlanner::PlanningResult &planningResult, const PathSettings &settings);
     };
