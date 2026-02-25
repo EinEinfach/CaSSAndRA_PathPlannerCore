@@ -1,6 +1,6 @@
 test_map.svg
-*json
 /.vscode
 /.venv
 /build
 planner_module*
+*.dSYM
