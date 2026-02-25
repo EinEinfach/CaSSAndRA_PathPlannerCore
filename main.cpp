@@ -59,5 +59,5 @@ int main()
     std::cout << "Schreibe das Ergbnis in ein SVG Format..." << std::endl;
     Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, result.debugLinesSec, result.slices);
 
-    std::cout << "Setup erfolgreich!" << std::endl;
+    std::cout << "Setup erfolgreich! test_map.svg liegt in dem Root-Verzeichnis." << std::endl;
 }

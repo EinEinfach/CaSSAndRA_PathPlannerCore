@@ -26,7 +26,7 @@ It solves the **Complete Coverage Path Planning (CCPP)** problem, allowing a rob
   Seamless integration into Python environments via pybind11.
 
 - **GeoJSON Support**  
-  Easily load map data from standard GeoJSON formats.
+  Easily load map data from standard GeoJSON formats. An example file is located in the root directory.
 
 ---
 
@@ -64,7 +64,7 @@ make
 ### Standalone (C++)
 
 To test the planner without Python, use the provided `main.cpp` debug script.  
-It reads a `map.geojson` and calculates the path directly.
+It reads a `example_map.json` and calculates the path directly.
 
 > **Note:**  
 > When running in standalone mode, the planner automatically generates an SVG file named `test_map.svg` in the root directory for visual verification of the calculated path and geometry.
@@ -124,7 +124,7 @@ Es löst das Problem der vollständigen Flächenabdeckung
   Nahtlose Integration in Python-Anwendungen mittels pybind11.
 
 - **GeoJSON Support**  
-  Lädt Kartendaten direkt aus dem standardisierten GeoJSON-Format.
+  Lädt Kartendaten direkt aus dem standardisierten GeoJSON-Format. Eine Beispiel Datei ist im Root-Verzeichnis vorhanden.
 
 ---
 
@@ -161,7 +161,7 @@ make
 ### Eigenständig (C++)
 
 Um den Planner ohne Python zu testen, kann das `main.cpp` Debug-Script genutzt werden.  
-Es liest eine `map.geojson` ein und berechnet den Pfad direkt.
+Es liest eine `example_map.json` ein und berechnet den Pfad direkt.
 
 > **Hinweis:**  
 > Im Stand-alone-Modus erzeugt der Planner automatisch eine SVG-Datei namens `test_map.svg` im Stammverzeichnis zur visuellen Kontrolle des berechneten Pfads.
@@ -206,3 +206,14 @@ result = service.computeFullTask(env, settings, start_pos)
 - nlohmann-json (for GeoJSON support)
 - pybind11 (for Python bindings)
 - Clipper2 Library
+
+
+## Donation
+
+If you enjoyed the project — or just feeling generous, consider buying me a beer. Cheers!
+
+[![](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=DTLYLLR45ZMPW)
+
+## Authors
+
+- [@EinEinfach](https://www.github.com/EinEinfach)
