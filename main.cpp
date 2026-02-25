@@ -50,7 +50,7 @@ int main()
     // Polygon obstacle4 = {{2.0, 2.0}, {4.0, 2.0}, {4.0, 4.0}, {2.0, 4.0}};
     // myEnv2.addObstacle(obstacle4);
 
-    auto myEnv = Planner::GeoJSONReader::loadEnvironmentFromFile("big map.json");
+    auto myEnv = Planner::GeoJSONReader::loadEnvironmentFromFile("example_map.json");
 
     Planner::PathService service;
     std::cout << "Starte PathService..." << std::endl;
