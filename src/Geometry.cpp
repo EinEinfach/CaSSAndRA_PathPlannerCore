@@ -460,7 +460,7 @@ namespace Planner
         return std::sqrt(std::pow(b.x - a.x, 2) + std::pow(b.y - a.y, 2));
     }
 
-    double GeometryUtils::calculateSignedArea(const Polygon &poly)
+    double GeometryUtils::calculateSignedArea(const LineString &poly)
     {
         const auto &pts = poly.getPoints();
         if (pts.size() < 3)
@@ -474,7 +474,7 @@ namespace Planner
         return area / 2.0;
     }
 
-    void GeometryUtils::ensureOrientation(Polygon &poly, bool ccw)
+    void GeometryUtils::ensureOrientation(LineString &poly, bool ccw)
     {
         double area = calculateSignedArea(poly);
         bool isCurrentlyCCW = (area > 0);

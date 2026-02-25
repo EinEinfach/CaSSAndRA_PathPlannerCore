@@ -86,9 +86,9 @@ namespace Planner
         static double calculateDistance(Point a, Point b);
 
         // Berechne Fläche
-        static double calculateSignedArea(const Polygon &poly);
+        static double calculateSignedArea(const LineString &poly);
 
         // Berechne die Orientierung (CW, CCW)
-        static void ensureOrientation(Polygon &poly, bool ccw);
+        static void ensureOrientation(LineString &poly, bool ccw);
     };
 };

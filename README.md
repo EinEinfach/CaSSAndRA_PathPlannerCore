@@ -5,7 +5,7 @@
 ## 🇬🇧 English
 
 ## Overview
-![Path Planner Preview](doc/preview.png)
+<img src="./doc/test_map.svg" width="600">
 
 This project provides a high-performance path planning engine written in C++, specifically designed for autonomous robotic lawnmowers (inspired by the CaSSAndRA project).
 

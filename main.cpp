@@ -25,10 +25,10 @@ int main()
     settings.distanceToBorder = 0.8;
     settings.mowArea = true;
     settings.mowBorder = true;
-    settings.mowBorderCcw = false;
+    settings.mowBorderCcw = true;
     settings.borderLaps = 2;
     settings.mowExclusionsBoder = true;
-    settings.mowExclusionsBorderCcw = false;
+    settings.mowExclusionsBorderCcw = true;
     settings.exclusionsBorderLaps = 2;
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;

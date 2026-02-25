@@ -3,7 +3,8 @@
 
 namespace Planner
 {
-    std::string PathService::getVersion() {
+    std::string PathService::getVersion()
+    {
         return version;
     }
 
@@ -80,6 +81,15 @@ namespace Planner
                 PathPlanner::generateRingSlices(workEnv, settings.offset, settings.borderLaps),
                 false);
 
+            // Wir prüfen noch die Einstellungen CW und CCW (Normalerweise ist der perimiter CCW gedreht). Wenn CW gewünscht ist drehen wir die nochmal
+            if (!settings.mowBorderCcw)
+            {
+                for (auto &s : borderSlices)
+                {
+                    GeometryUtils::ensureOrientation(s, false);
+                }
+            }
+
             for (auto &s : borderSlices)
             {
                 allSlices.push_back(s);
@@ -89,17 +99,16 @@ namespace Planner
         // Teil 3 Bearbeite exclusions
         if (settings.mowExclusionsBoder && settings.exclusionsBorderLaps > 0)
         {
-            // for (auto &obs : workEnv.getObstacles())
-            // {
-            //     allSlices.push_back(obs);
-            // }
-            if (settings.mowExclusionsBoder && settings.exclusionsBorderLaps > 0)
-            {
-                auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.exclusionsBorderLaps), true);
-                for (auto &s : exclusionsSlices)
-                {
-                    allSlices.push_back(s);
+            auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.exclusionsBorderLaps), true);
+            // Wir prüfen noch die Einstellungen CW und CCW (Normalerweise sind die Exclusions CW gedreht). Wenn CCW gewünscht ist drehen wir die nochmal
+            if (settings.mowExclusionsBorderCcw) {
+                for (auto &s : exclusionsSlices) {
+                    GeometryUtils::ensureOrientation(s, true);
                 }
+            }
+            for (auto &s : exclusionsSlices)
+            {
+                allSlices.push_back(s);
             }
         }
 

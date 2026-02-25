@@ -42,6 +42,12 @@ namespace Planner
         file << "<svg viewBox=\"0 0 " << width << " " << height
              << "\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background: #fafafa\">\n";
 
+        file << "<defs>\n"
+             << "  <marker id=\"arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\">\n"
+             << "    <polygon points=\"0 0, 10 3.5, 0 7\" fill=\"#00008b\" fill-opacity=\"0.4\" />\n"
+             << "  </marker>\n"
+             << "</defs>\n";
+
         // --- NEU: Gitter und Achsbeschriftung ---
 
         // X-Achse Ticks und Gitter (vertikale Linien)
@@ -95,10 +101,51 @@ namespace Planner
         if (!path.getPoints().empty())
         {
             // 1. Der Pfad selbst (Layer 1)
+            const auto &pts = path.getPoints();
+
+            // A. Der eigentliche Pfad (Hintergrund)
             file << "<polyline points=\"";
-            for (const auto &p : path.getPoints())
+            for (const auto &p : pts)
                 file << transformX(p.x) << "," << transformY(p.y) << " ";
-            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"2.5\" stroke-opacity=\"0.6\" stroke-linejoin=\"round\" stroke-linecap=\"round\" />\n";
+            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"2.0\" stroke-opacity=\"0.6\" />\n";
+
+            // B. Pfeile an jedem 9. Punkt (durch ein zweites, transparentes polyline)
+            file << "<polyline points=\"";
+            for (size_t i = 0; i < pts.size(); i += 9)
+            { // Jeder 9. Punkt
+                file << transformX(pts[i].x) << "," << transformY(pts[i].y) << " ";
+            }
+            file << "\" fill=\"none\" stroke=\"none\" marker-mid=\"url(#arrowhead)\" />\n";
+
+            // C. Animation
+            double totalLength = 0.0;
+            const auto &p = path.getPoints();
+            for (size_t i = 0; i < pts.size() - 1; ++i)
+            {
+                double dx = p[i + 1].x - p[i].x;
+                double dy = p[i + 1].y - p[i].y;
+                totalLength += std::sqrt(dx * dx + dy * dy);
+            }
+
+            // Geschwindigkeit definieren: z.B. 5.0 Meter pro Sekunde (im SVG-Maßstab)
+            double metersPerSecond = 5.0;
+            double durationInSeconds = totalLength / metersPerSecond;
+            
+            file << "  \n";
+            file << "  <path id=\"animPath\" d=\"M ";
+            for (size_t i = 0; i < pts.size(); ++i)
+            {
+                file << transformX(pts[i].x) << " " << transformY(pts[i].y) << (i == pts.size() - 1 ? "" : " L ");
+            }
+            file << "\" fill=\"none\" stroke=\"none\" />\n";
+
+            file << "  <g>\n"
+                 << "    <line x1=\"-7\" y1=\"-7\" x2=\"7\" y2=\"7\" stroke=\"red\" stroke-width=\"3\" />\n"
+                 << "    <line x1=\"-7\" y1=\"7\" x2=\"7\" y2=\"-7\" stroke=\"red\" stroke-width=\"3\" />\n"
+                 << "    <animateMotion dur=\"" << durationInSeconds << "s\" repeatCount=\"indefinite\" rotate=\"auto\">\n"
+                 << "      <mpath href=\"#animPath\" />\n"
+                 << "    </animateMotion>\n"
+                 << "  </g>\n";
 
             // 2. Startpunkt als Kreuz markieren (erster Punkt)
             const auto &start = path.getPoints().front();
