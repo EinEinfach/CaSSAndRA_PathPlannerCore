@@ -43,6 +43,14 @@ namespace Planner
              << "\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background: #fafafa\">\n";
 
         file << "<defs>\n"
+             << "  \n"
+             << "  <g id=\"tractor\">\n"
+             << "    <rect x=\"-8\" y=\"-6\" width=\"16\" height=\"12\" rx=\"2\" fill=\"#228B22\" /> \n"
+             << "    <rect x=\"2\" y=\"-7\" width=\"4\" height=\"14\" rx=\"1\" fill=\"#333\" />     \n"
+             << "    <rect x=\"-6\" y=\"-5\" width=\"3\" height=\"10\" rx=\"1\" fill=\"#333\" />    \n"
+             << "    <rect x=\"-2\" y=\"-3\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#87CEEB\" />  \n"
+             << "  </g>\n"
+             << "  \n"
              << "  <marker id=\"arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\">\n"
              << "    <polygon points=\"0 0, 10 3.5, 0 7\" fill=\"#00008b\" fill-opacity=\"0.4\" />\n"
              << "  </marker>\n"
@@ -109,15 +117,7 @@ namespace Planner
                 file << transformX(p.x) << "," << transformY(p.y) << " ";
             file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"2.0\" stroke-opacity=\"0.6\" />\n";
 
-            // B. Pfeile an jedem 9. Punkt (durch ein zweites, transparentes polyline)
-            file << "<polyline points=\"";
-            for (size_t i = 0; i < pts.size(); i += 9)
-            { // Jeder 9. Punkt
-                file << transformX(pts[i].x) << "," << transformY(pts[i].y) << " ";
-            }
-            file << "\" fill=\"none\" stroke=\"none\" marker-mid=\"url(#arrowhead)\" />\n";
-
-            // C. Animation
+            // B. Animation
             double totalLength = 0.0;
             const auto &p = path.getPoints();
             for (size_t i = 0; i < pts.size() - 1; ++i)
@@ -130,7 +130,7 @@ namespace Planner
             // Geschwindigkeit definieren: z.B. 5.0 Meter pro Sekunde (im SVG-Maßstab)
             double metersPerSecond = 5.0;
             double durationInSeconds = totalLength / metersPerSecond;
-            
+
             file << "  \n";
             file << "  <path id=\"animPath\" d=\"M ";
             for (size_t i = 0; i < pts.size(); ++i)
@@ -139,9 +139,9 @@ namespace Planner
             }
             file << "\" fill=\"none\" stroke=\"none\" />\n";
 
-            file << "  <g>\n"
-                 << "    <line x1=\"-7\" y1=\"-7\" x2=\"7\" y2=\"7\" stroke=\"red\" stroke-width=\"3\" />\n"
-                 << "    <line x1=\"-7\" y1=\"7\" x2=\"7\" y2=\"-7\" stroke=\"red\" stroke-width=\"3\" />\n"
+            file << "  \n"
+                 << "  <g>\n"
+                 << "    <use href=\"#tractor\" />\n"
                  << "    <animateMotion dur=\"" << durationInSeconds << "s\" repeatCount=\"indefinite\" rotate=\"auto\">\n"
                  << "      <mpath href=\"#animPath\" />\n"
                  << "    </animateMotion>\n"
@@ -194,15 +194,54 @@ namespace Planner
             }
         }
 
+        // Pfeile
+        const auto &pathPts = path.getPoints();
+        if (pathPts.size() >= 2)
+        {
+            for (size_t i = 0; i < pathPts.size() - 1; ++i)
+            {
+                const auto &p1 = pathPts[i];
+                const auto &p2 = pathPts[i + 1];
+
+                // Berechne Distanz dieses Segments
+                double dx = p2.x - p1.x;
+                double dy = p2.y - p1.y;
+                double dist = std::sqrt(dx * dx + dy * dy);
+
+                // Nur Pfeile auf Segmenten zeichnen, die länger als z.B. 1.0 Meter sind
+                // Das ignoriert meist die kurzen Wendemanöver zwischen den Bahnen
+                if (dist > 1.0)
+                {
+                    double midX = (p1.x + p2.x) / 2.0;
+                    double midY = (p1.y + p2.y) / 2.0;
+
+                    // Zeichne einen kurzen Richtungsvektor für den Marker
+                    // Wir nutzen hier eine etwas kräftigere Farbe als das Pfad-Blau
+                    file << "<line x1=\"" << transformX(midX) << "\" y1=\"" << transformY(midY)
+                         << "\" x2=\"" << transformX(midX + (dx / dist) * 0.1) << "\" y2=\"" << transformY(midY + (dy / dist) * 0.1)
+                         << "\" fill=\"none\" stroke=\"none\" marker-start=\"url(#arrowhead)\" />\n";
+                }
+            }
+        }
+
         // Slice-Beschriftung
         for (size_t i = 0; i < originalSlices.size(); ++i)
         {
             const auto &pts = originalSlices[i].getPoints();
-            if (!pts.empty())
+            if (pts.size() >= 2)
             {
-                Point p = pts.front();
-                file << "<text x=\"" << transformX(p.x) << "\" y=\"" << transformY(p.y) - 8
-                     << "\" fill=\"darkgreen\" font-weight=\"bold\" font-size=\"8\" font-family=\"Arial\">" << i << "</text>\n";
+                // 1. Die Bahn zeichnen (gestrichelt)
+                file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
+                     << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
+                     << "\" stroke=\"green\" stroke-width=\"0.5\" stroke-dasharray=\"5,5\" />\n";
+
+                // 2. Mittelpunkt berechnen
+                double midX = (pts[0].x + pts[1].x) / 2.0;
+                double midY = (pts[0].y + pts[1].y) / 2.0;
+
+                // 3. Slice-Index (Nummer) etwas versetzt daneben schreiben
+                file << "<text x=\"" << transformX(midX) + 5 << "\" y=\"" << transformY(midY) - 5
+                     << "\" fill=\"darkgreen\" font-size=\"8\" font-family=\"Arial\" opacity=\"0.6\">" << i << "</text>\n";
             }
         }
 
@@ -238,6 +277,10 @@ namespace Planner
         double areaY = legendY + 45 + (5 * 20);
         file << "  <rect x=\"" << legendX + 10 << "\" y=\"" << areaY - 10 << "\" width=\"30\" height=\"10\" fill=\"#ffcccc\" stroke=\"red\" />\n";
         file << "  <text x=\"" << legendX + 50 << "\" y=\"" << areaY << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">Hindernis</text>\n";
+
+        double tractorLegendY = legendY + 45 + (3 * 20);
+        file << "  <use href=\"#tractor\" transform=\"translate(" << legendX + 25 << "," << tractorLegendY - 5 << ") scale(0.8)\" />\n";
+        file << "  <text x=\"" << legendX + 50 << "\" y=\"" << tractorLegendY << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">Mäher (animiert)</text>\n";
 
         file << "</svg>";
         file.close();
