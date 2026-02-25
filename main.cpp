@@ -17,12 +17,12 @@ int main()
 {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
-    Point startPos = {1.0497111925, -1.8987146778000001};//{0.0, 0.0};
+    Point startPos = {-2.0, -2.0};//{0.0, 0.0};
     Planner::PathSettings settings;
     settings.pattern = "lines";
-    settings.offset = 0.5;
+    settings.offset = 0.4;
     settings.angle = 0.5;
-    settings.distanceToBorder = 1.0;
+    settings.distanceToBorder = 0.8;
     settings.mowArea = true;
     settings.mowBorder = true;
     settings.mowBorderCcw = false;

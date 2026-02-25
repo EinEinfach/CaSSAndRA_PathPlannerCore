@@ -94,10 +94,21 @@ namespace Planner
         // --- 1. LAYER: Der geplante Pfad (Halbtransparent, damit man sieht was darunter liegt) ---
         if (!path.getPoints().empty())
         {
+            // 1. Der Pfad selbst (Layer 1)
             file << "<polyline points=\"";
             for (const auto &p : path.getPoints())
                 file << transformX(p.x) << "," << transformY(p.y) << " ";
             file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"2.5\" stroke-opacity=\"0.6\" stroke-linejoin=\"round\" stroke-linecap=\"round\" />\n";
+
+            // 2. Startpunkt als Kreuz markieren (erster Punkt)
+            const auto &start = path.getPoints().front();
+            double sX = transformX(start.x);
+            double sY = transformY(start.y);
+            double crossSize = 6.0; // Größe des Kreuzes
+
+            file << "  \n";
+            file << "  <line x1=\"" << sX - crossSize << "\" y1=\"" << sY - crossSize << "\" x2=\"" << sX + crossSize << "\" y2=\"" << sY + crossSize << "\" stroke=\"#00008b\" stroke-width=\"2\" />\n";
+            file << "  <line x1=\"" << sX - crossSize << "\" y1=\"" << sY + crossSize << "\" x2=\"" << sX + crossSize << "\" y2=\"" << sY - crossSize << "\" stroke=\"#00008b\" stroke-width=\"2\" />\n";
         }
 
         // --- 2. LAYER: A* Suchraum (Hintergrund) ---
@@ -170,8 +181,14 @@ namespace Planner
         // addLegendItem(2, "grey", "A* Suchraum", true, 1.0);
         // addLegendItem(3, "green", "Slices / Bahnen", true, 0.5);
 
+        // Startpunkt Kreuz in der Legende
+        double startY = legendY + 45 + (4 * 20);
+        file << "  <line x1=\"" << legendX + 15 << "\" y1=\"" << startY - 10 << "\" x2=\"" << legendX + 35 << "\" y2=\"" << startY << "\" stroke=\"#00008b\" stroke-width=\"2\" />\n";
+        file << "  <line x1=\"" << legendX + 15 << "\" y1=\"" << startY << "\" x2=\"" << legendX + 35 << "\" y2=\"" << startY - 10 << "\" stroke=\"#00008b\" stroke-width=\"2\" />\n";
+        file << "  <text x=\"" << legendX + 50 << "\" y=\"" << startY << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">Startpunkt</text>\n";
+
         // Marker für Flächen
-        double areaY = legendY + 45 + (4 * 20);
+        double areaY = legendY + 45 + (5 * 20);
         file << "  <rect x=\"" << legendX + 10 << "\" y=\"" << areaY - 10 << "\" width=\"30\" height=\"10\" fill=\"#ffcccc\" stroke=\"red\" />\n";
         file << "  <text x=\"" << legendX + 50 << "\" y=\"" << areaY << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">Hindernis</text>\n";
 
