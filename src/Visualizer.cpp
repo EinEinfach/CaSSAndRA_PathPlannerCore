@@ -91,7 +91,40 @@ namespace Planner
             file << "\" fill=\"#ffcccc\" stroke=\"red\" stroke-width=\"1\" />\n";
         }
 
-        // Debug-Lines (Warum wurde nicht verbunden?)
+        // --- 1. LAYER: Der geplante Pfad (Halbtransparent, damit man sieht was darunter liegt) ---
+        if (!path.getPoints().empty())
+        {
+            file << "<polyline points=\"";
+            for (const auto &p : path.getPoints())
+                file << transformX(p.x) << "," << transformY(p.y) << " ";
+            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"2.5\" stroke-opacity=\"0.6\" stroke-linejoin=\"round\" stroke-linecap=\"round\" />\n";
+        }
+
+        // --- 2. LAYER: A* Suchraum (Hintergrund) ---
+        // for (const auto &line : debugLinesSec)
+        // {
+        //     const auto &pts = line.getPoints();
+        //     if (pts.size() >= 2)
+        //     {
+        //         file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
+        //              << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
+        //              << "\" stroke=\"#bbb\" stroke-width=\"0.8\" stroke-dasharray=\"2,2\" />\n";
+        //     }
+        // }
+
+        // --- 3. LAYER: Slices / Bahnen ---
+        // for (size_t i = 0; i < originalSlices.size(); ++i)
+        // {
+        //     const auto &pts = originalSlices[i].getPoints();
+        //     if (pts.size() >= 2)
+        //     {
+        //         file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
+        //              << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
+        //              << "\" stroke=\"green\" stroke-width=\"0.5\" stroke-dasharray=\"5,5\" />\n";
+        //     }
+        // }
+
+        // --- 4. LAYER: Fehler / Verbindungslinien (Ganz oben, da kritisch) ---
         for (const auto &line : debugLines)
         {
             const auto &pts = line.getPoints();
@@ -99,19 +132,7 @@ namespace Planner
             {
                 file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
                      << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
-                     << "\" stroke=\"red\" stroke-width=\"2.5\" stroke-dasharray=\"5,5\" />\n";
-            }
-        }
-
-        // Debug-Lines (AStar Wege die betracttet worden)
-        for (const auto &line : debugLinesSec)
-        {
-            const auto &pts = line.getPoints();
-            if (pts.size() >= 2)
-            {
-                file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
-                     << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
-                     << "\" stroke=\"grey\" stroke-width=\"1.0\" stroke-dasharray=\"5,5\" />\n";
+                     << "\" stroke=\"red\" stroke-width=\"3\" stroke-dasharray=\"8,4\" />\n";
             }
         }
 
@@ -124,127 +145,37 @@ namespace Planner
                 Point p = pts.front();
                 file << "<text x=\"" << transformX(p.x) << "\" y=\"" << transformY(p.y) - 8
                      << "\" fill=\"darkgreen\" font-weight=\"bold\" font-size=\"8\" font-family=\"Arial\">" << i << "</text>\n";
-                file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
-                     << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
-                     << "\" stroke=\"green\" stroke-width=\"0.5\" stroke-dasharray=\"5,5\" />\n";
             }
         }
 
-        // Pfad
-        if (!path.getPoints().empty())
+        // --- LEGENDE ---
+        double legendX = width - 210; // Position rechts oben
+        double legendY = 20;
+
+        file << "  \n";
+        file << "  <rect x=\"" << legendX << "\" y=\"" << legendY << "\" width=\"190\" height=\"150\" rx=\"5\" fill=\"white\" fill-opacity=\"0.8\" stroke=\"#ccc\" />\n";
+        file << "  <text x=\"" << legendX + 10 << "\" y=\"" << legendY + 20 << "\" font-family=\"Arial\" font-size=\"14\" font-weight=\"bold\">Legende</text>\n";
+
+        auto addLegendItem = [&](int index, std::string color, std::string label, bool dashed = false, double strokeWidth = 2.0)
         {
-            file << "<polyline points=\"";
-            for (const auto &p : path.getPoints())
-                file << transformX(p.x) << "," << transformY(p.y) << " ";
-            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"1.0\" />\n";
-        }
+            double itemY = legendY + 45 + (index * 20);
+            file << "  <line x1=\"" << legendX + 10 << "\" y1=\"" << itemY - 5 << "\" x2=\"" << legendX + 40 << "\" y2=\"" << itemY - 5
+                 << "\" stroke=\"" << color << "\" stroke-width=\"" << strokeWidth << "\" "
+                 << (dashed ? "stroke-dasharray=\"5,5\"" : "") << " />\n";
+            file << "  <text x=\"" << legendX + 50 << "\" y=\"" << itemY << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">" << label << "</text>\n";
+        };
+
+        addLegendItem(0, "#87cefa", "Geplanter Pfad", false, 2.0);
+        addLegendItem(1, "red", "Weg löst A* Suche aus", true, 2.5);
+        // addLegendItem(2, "grey", "A* Suchraum", true, 1.0);
+        // addLegendItem(3, "green", "Slices / Bahnen", true, 0.5);
+
+        // Marker für Flächen
+        double areaY = legendY + 45 + (4 * 20);
+        file << "  <rect x=\"" << legendX + 10 << "\" y=\"" << areaY - 10 << "\" width=\"30\" height=\"10\" fill=\"#ffcccc\" stroke=\"red\" />\n";
+        file << "  <text x=\"" << legendX + 50 << "\" y=\"" << areaY << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">Hindernis</text>\n";
 
         file << "</svg>";
         file.close();
     }
-    // void Visualizer::exportToSVG(const std::string &filename, const Environment &env, const LineString &path, const std::vector<LineString> &debugLines, const std::vector<LineString> &originalSlices)
-    // {
-    //     std::ofstream file(filename);
-    //     if (!file.is_open())
-    //         return;
-
-    //     // 1. Bounds finden
-    //     double minX = 1e10, minY = 1e10, maxX = -1e10, maxY = -1e10;
-    //     auto updateBounds = [&](double x, double y)
-    //     {
-    //         if (x < minX)
-    //             minX = x;
-    //         if (y < minY)
-    //             minY = y;
-    //         if (x > maxX)
-    //             maxX = x;
-    //         if (y > maxY)
-    //             maxY = y;
-    //     };
-
-    //     for (const auto &p : env.getPerimeter().getPoints())
-    //         updateBounds(p.x, p.y);
-
-    //     // Konstanten für die Darstellung
-    //     double scale = 20.0;
-    //     double padding = 40.0; // Etwas mehr Platz für Achsenbeschriftung
-
-    //     // ViewBox Maße
-    //     double width = (maxX - minX) * scale + 2 * padding;
-    //     double height = (maxY - minY) * scale + 2 * padding;
-
-    //     // Hilfsfunktion zur Koordinatentransformation (Spiegelung an der Y-Achse)
-    //     // Wir ziehen minY ab, damit die Zeichnung bei 0 beginnt,
-    //     // und ziehen das Ergebnis von der Gesamthöhe ab, um Y umzukehren.
-    //     auto transformX = [&](double x)
-    //     { return (x - minX) * scale + padding; };
-    //     auto transformY = [&](double y)
-    //     { return height - ((y - minY) * scale + padding); };
-
-    //     file << "<svg viewBox=\"0 0 " << width << " " << height
-    //          << "\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background: #fafafa\">\n";
-
-    //     // 2. Achsen zeichnen (X und Y bei 0,0 falls im Sichtfeld, sonst am Rand)
-    //     double xAxisY = transformY(0.0);
-    //     double yAxisX = transformX(0.0);
-
-    //     // X-Achse
-    //     file << "<line x1=\"0\" y1=\"" << xAxisY << "\" x2=\"" << width << "\" y2=\"" << xAxisY
-    //          << "\" stroke=\"#ccc\" stroke-width=\"1\" />\n";
-    //     // Y-Achse
-    //     file << "<line x1=\"" << yAxisX << "\" y1=\"0\" x2=\"" << yAxisX << "\" y2=\"" << height
-    //          << "\" stroke=\"#ccc\" stroke-width=\"1\" />\n";
-
-    //     // 3. Perimeter (Grau)
-    //     file << "<polygon points=\"";
-    //     for (const auto &p : env.getPerimeter().getPoints())
-    //         file << transformX(p.x) << "," << transformY(p.y) << " ";
-    //     file << "\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"0.5\" />\n";
-
-    //     // 4. Hindernisse (Rot)
-    //     for (const auto &obs : env.getObstacles())
-    //     {
-    //         file << "<polygon points=\"";
-    //         for (const auto &p : obs.getPoints())
-    //             file << transformX(p.x) << "," << transformY(p.y) << " ";
-    //         file << "\" fill=\"#ffcccc\" stroke=\"red\" stroke-width=\"0.5\" />\n";
-    //     }
-
-    //     // 5. Slice-Nummern zur Fehleranalyse (Index-Beschriftung)
-    //     // Falls du die originalSlices übergibst, beschriften wir sie hier
-    //     for (size_t i = 0; i < originalSlices.size(); ++i)
-    //     {
-    //         const auto &pts = originalSlices[i].getPoints();
-    //         if (!pts.empty())
-    //         {
-    //             Point p = pts.front();
-    //             file << "<text x=\"" << transformX(p.x) << "\" y=\"" << transformY(p.y) - 5
-    //                  << "\" fill=\"green\" font-size=\"10\" font-family=\"Arial\">#" << i << "</text>\n";
-    //         }
-    //     }
-
-    //     // 6. Debug-Lines (Rote gestrichelte Linien für abgelehnte Verbindungen)
-    //     for (const auto &line : debugLines)
-    //     {
-    //         const auto &pts = line.getPoints();
-    //         if (pts.size() >= 2)
-    //         {
-    //             file << "<line x1=\"" << transformX(pts[0].x) << "\" y1=\"" << transformY(pts[0].y)
-    //                  << "\" x2=\"" << transformX(pts[1].x) << "\" y2=\"" << transformY(pts[1].y)
-    //                  << "\" stroke=\"red\" stroke-width=\"1.5\" stroke-dasharray=\"4,2\" />\n";
-    //         }
-    //     }
-
-    //     // 7. Geplanter Pfad (Blau)
-    //     if (!path.getPoints().empty())
-    //     {
-    //         file << "<polyline points=\"";
-    //         for (const auto &p : path.getPoints())
-    //             file << transformX(p.x) << "," << transformY(p.y) << " ";
-    //         file << "\" fill=\"none\" stroke=\"blue\" stroke-width=\"1\" stroke-dasharray=\"2,2\" />\n";
-    //     }
-
-    //     file << "</svg>";
-    //     file.close();
-    // }
 }

@@ -19,7 +19,7 @@ int main()
 
     Point startPos = {1.0497111925, -1.8987146778000001};//{0.0, 0.0};
     Planner::PathSettings settings;
-    settings.pattern = "rings";
+    settings.pattern = "lines";
     settings.offset = 0.5;
     settings.angle = 0.5;
     settings.distanceToBorder = 1.0;
@@ -57,7 +57,7 @@ int main()
     auto result = service.computeFullTask(myEnv, settings, startPos);
 
     std::cout << "Schreibe das Ergbnis in ein SVG Format..." << std::endl;
-    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, {}, result.slices);
+    Visualizer::exportToSVG("test_map.svg", myEnv, result.path, result.debugLines, result.debugLinesSec, result.slices);
 
     std::cout << "Setup erfolgreich!" << std::endl;
 }
