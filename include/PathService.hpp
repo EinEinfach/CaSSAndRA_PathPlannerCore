@@ -33,7 +33,7 @@ namespace Planner
         std::string getVersion();
 
     private:
-        std::string version = "1.0";
+        std::string version = "1.1";
         // Interne Hilfsmethoden zur Strukturierung
         void rotateResult(PathPlanner::PlanningResult &planningResult, const PathSettings &settings);
     };
