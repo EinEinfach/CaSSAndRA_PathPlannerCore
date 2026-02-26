@@ -2,6 +2,10 @@
 #include "Environment.hpp"
 #include "Geometry.hpp"
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 using namespace Planner;
 
 class EnvironmentTest : public ::testing::Test
