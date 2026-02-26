@@ -17,19 +17,19 @@ int main()
 {
     std::cout << "--- Starte Coverage Path Planner ---" << std::endl;
 
-    Point startPos = {-2.0, -2.0};//{0.0, 0.0};
+    Point startPos = {-2.0, -2.0}; // Startposition des Robots
     Planner::PathSettings settings;
-    settings.pattern = "lines";
-    settings.offset = 0.2;
-    settings.angle = 0.5;
-    settings.distanceToBorder = 0.4;
-    settings.mowArea = true;
-    settings.mowBorder = true;
-    settings.mowBorderCcw = true;
-    settings.borderLaps = 2;
-    settings.mowExclusionsBoder = true;
-    settings.mowExclusionsBorderCcw = true;
-    settings.exclusionsBorderLaps = 2;
+    settings.pattern = "lines";             // Mögliche Werte (lines, squares, rings)
+    settings.offset = 0.2;                  // Abstand zwischen der Bahnen (m)
+    settings.angle = 0.5;                   // Winkel der Bahnen (RAD)
+    settings.distanceToBorder = 0.4;        // Abstand zu Perimetergrenze (m)
+    settings.mowArea = true;                // Soll die Route innerhalb des Bereiches berechnet werden
+    settings.mowBorder = true;              // Sollen die Grenzen des Perimeters abgefahren werden (in Kombination mit borderLaps)
+    settings.mowBorderCcw = true;           // Soll die Perimetergrenze gegen Uhrzeigersinn abgefahren werden
+    settings.borderLaps = 2;                // Wie veile Runden für Perimetergrenze, jede neue Runde versetzt um den Offset (in Kombination mit mowBorder)
+    settings.mowExclusionsBoder = true;     // Soll die Exclusiongrenze abgefahren werden (in Kombination mit mowExclusionsBorderLaps)
+    settings.mowExclusionsBorderCcw = true; // Soll die Exclusiongrenze gegen Uhrzeigersinn abgefahren werden
+    settings.exclusionsBorderLaps = 2;      // Wie viele Runden für Exclusiongrnze, jede neue Runde versetzt um den Offset (in Kombination mit mowExclusionBoder)
 
     std::cout << "Initialisiere geometriebasiertes Environment..." << std::endl;
     // Polygon perimeter1 = {{-5.0, -3.0}, {20.0, 0.0}, {20.0, 30.0}, {2.0, 30.0}, {2.0, 20.0}, {15.0, 20.0}, {17.0, 15.0}, {0.0, 10.0}};
