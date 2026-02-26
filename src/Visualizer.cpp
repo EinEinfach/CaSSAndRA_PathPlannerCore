@@ -43,7 +43,6 @@ namespace Planner
              << "\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background: #fafafa\">\n";
 
         file << "<defs>\n"
-             << "  \n"
              << "  <g id=\"tractor\">\n"
              << "    <rect x=\"-8\" y=\"-6\" width=\"16\" height=\"12\" rx=\"2\" fill=\"#228B22\" /> \n"
              << "    <rect x=\"2\" y=\"-7\" width=\"4\" height=\"14\" rx=\"1\" fill=\"#333\" />     \n"
@@ -51,8 +50,9 @@ namespace Planner
              << "    <rect x=\"-2\" y=\"-3\" width=\"6\" height=\"6\" rx=\"1\" fill=\"#87CEEB\" />  \n"
              << "  </g>\n"
              << "  \n"
-             << "  <marker id=\"arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"5\" refY=\"3.5\" orient=\"auto\">\n"
-             << "    <polygon points=\"0 0, 10 3.5, 0 7\" fill=\"#00008b\" fill-opacity=\"0.4\" />\n"
+             << "  \n"
+             << "  <marker id=\"arrowhead\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"2\" orient=\"auto\">\n"
+             << "    <polygon points=\"0 0, 5 2, 0 4\" fill=\"#00008b\" fill-opacity=\"0.2\" />\n"
              << "  </marker>\n"
              << "</defs>\n";
 
@@ -115,7 +115,7 @@ namespace Planner
             file << "<polyline points=\"";
             for (const auto &p : pts)
                 file << transformX(p.x) << "," << transformY(p.y) << " ";
-            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"2.0\" stroke-opacity=\"0.6\" />\n";
+            file << "\" fill=\"none\" stroke=\"#87cefa\" stroke-width=\"1.0\" stroke-opacity=\"0.6\" />\n";
 
             // B. Animation
             double totalLength = 0.0;
@@ -265,7 +265,7 @@ namespace Planner
         addLegendItem(0, "#87cefa", "Geplanter Pfad", false, 2.0);
         addLegendItem(1, "red", "Weg löst A* Suche aus", true, 2.5);
         // addLegendItem(2, "grey", "A* Suchraum", true, 1.0);
-        // addLegendItem(3, "green", "Slices / Bahnen", true, 0.5);
+        addLegendItem(2, "green", "Slices / Bahnen", true, 0.5);
 
         // Startpunkt Kreuz in der Legende
         double startY = legendY + 45 + (4 * 20);

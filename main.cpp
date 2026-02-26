@@ -20,9 +20,9 @@ int main()
     Point startPos = {-2.0, -2.0};//{0.0, 0.0};
     Planner::PathSettings settings;
     settings.pattern = "lines";
-    settings.offset = 0.4;
+    settings.offset = 0.2;
     settings.angle = 0.5;
-    settings.distanceToBorder = 0.8;
+    settings.distanceToBorder = 0.4;
     settings.mowArea = true;
     settings.mowBorder = true;
     settings.mowBorderCcw = true;
