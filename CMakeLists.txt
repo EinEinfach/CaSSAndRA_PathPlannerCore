@@ -54,6 +54,8 @@ add_executable(CoveragePlanner main.cpp ${CORE_SOURCES})
 # Python Modul
 pybind11_add_module(planner_module src/python_wrapper.cpp ${CORE_SOURCES})
 
+install(TARGETS planner_module LIBRARY DESTINATION .)
+
 # -----------------------------------------------------------------------------
 # 4. Plattform-Spezifische Einstellungen
 # -----------------------------------------------------------------------------
