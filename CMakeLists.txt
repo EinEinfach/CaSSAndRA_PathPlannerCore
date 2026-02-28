@@ -48,12 +48,20 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "python_wrapper.cpp")
 # 3. Targets
 # -----------------------------------------------------------------------------
 
-# Standalone App
-add_executable(CoveragePlanner main.cpp ${CORE_SOURCES})
+# Standalone App: Nur bauen, wenn wir NICHT für ein Python-Wheel (SKBUILD) kompilieren
+if(NOT SKBUILD)
+    # Da die Standalone-App nlohmann/json braucht, suchen wir sie auch nur hier
+    find_package(nlohmann_json QUIET) 
+    
+    add_executable(CoveragePlanner main.cpp ${CORE_SOURCES})
+    # Falls nlohmann_json gefunden wurde, verlinken (oder Header-Pfad nutzen)
+    # target_link_libraries(CoveragePlanner PRIVATE nlohmann_json::nlohmann_json)
+endif()
 
-# Python Modul
+# Python Modul: Wird immer gebaut (auch im Wheel)
 pybind11_add_module(planner_module src/python_wrapper.cpp ${CORE_SOURCES})
 
+# Wichtig für scikit-build-core
 install(TARGETS planner_module LIBRARY DESTINATION .)
 
 # -----------------------------------------------------------------------------
