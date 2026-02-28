@@ -1,0 +1,19 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "cmake>=3.15",
+    "pybind11>=2.10",
+    "scikit-build>=0.17.0"  # Hilft enorm bei der Verbindung von CMake & Python
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "planner_module"
+version = "1.1"
+description = "Path Planner Core für CaSSAndRA"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[tool.setuptools]
+# Hier sagen wir setuptools, dass es keine reinen Python-Files gibt
+packages = []

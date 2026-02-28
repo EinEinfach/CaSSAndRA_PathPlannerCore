@@ -1,0 +1,40 @@
+name: Build Python Wheels
+
+on: [push, pull_request]
+
+jobs:
+  build_wheels:
+    name: Build wheels for ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Hier definiert man die Python Versionen (cp39 = Python 3.9, etc.)
+        python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.17.0
+        env:
+          CIBW_BUILD: "${{ matrix.python }}-*"
+          CIBW_ARCHS_LINUX: x86_64 aarch64
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_WINDOWS: AMD64
+          
+          # Übergabe von Argumenten an CMake
+          CIBW_ENVIRONMENT: CMAKE_ARGS="-DPYBIND11_FINDPYTHON=ON"
+
+      - name: Upload Wheels
+        uses: actions/upload-artifact@v4
+        with:
+          # Die Dateien werden unter diesem Namen im GitHub Interface gespeichert
+          name: wheels-${{ matrix.os }}-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
