@@ -80,10 +80,10 @@ clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_te
 
 ### Python Integration
 
-The core is designed to be compiled as a Python module (`planner_module`).
+The core is designed to be compiled as a Python module (`coverage_path_planner`).
 
 ```python
-import planner_module as pm
+import coverage_path_planner as pm
 
 # Setup environment
 peri = pm.Polygon([(0,0), (10,0), (10,10), (0,10)])
@@ -177,11 +177,11 @@ clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_te
 
 ### Python-Anbindung
 
-Der Kern wird als Python-Modul (`planner_module`) kompiliert und eingebunden.
+Der Kern wird als Python-Modul (`coverage_path_planner`) kompiliert und eingebunden.
 
 ```python
 import math
-import planner_module as pm
+import coverage_path_planner as pm
 
 # Umgebung erstellen
 perimeter = pm.Polygon([(0,0), (20,0), (20,20), (0,20)])

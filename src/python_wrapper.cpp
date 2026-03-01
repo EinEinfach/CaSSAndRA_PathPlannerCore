@@ -7,7 +7,7 @@
 namespace py = pybind11;
 using namespace Planner;
 
-PYBIND11_MODULE(planner_module, m)
+PYBIND11_MODULE(coverage_path_planner, m)
 {
     m.doc() = "C++ Path Planner Module für Python UI";
 
