@@ -2,5 +2,5 @@ test_map.svg
 /.vscode
 /.venv
 /build
-planner_module*
+coverage_path_planner*
 *.dSYM

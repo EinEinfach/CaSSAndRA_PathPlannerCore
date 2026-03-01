@@ -46,7 +46,7 @@ $(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 # Aufräumen
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -f planner_module*.so
+	rm -f coverage_path_planner*.so
 
 .PHONY: all clean test python_module
 
@@ -69,4 +69,4 @@ PY_SUFFIX = $(shell $(VENV_BIN)/python3-config --extension-suffix)
 python_module: $(PYTHON_OBJS)
 	$(CXX) $(CXXFLAGS) $(PY_INC) -shared -undefined dynamic_lookup \
 	$(PYTHON_OBJS) src/python_wrapper.cpp \
-	-o planner_module$(PY_SUFFIX)
+	-o coverage_path_planner$(PY_SUFFIX)

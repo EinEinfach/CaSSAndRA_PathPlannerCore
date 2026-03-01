@@ -83,10 +83,10 @@ if(NOT SKBUILD)
 endif()
 
 # Python Modul: Wird immer gebaut (auch im Wheel)
-pybind11_add_module(planner_module src/python_wrapper.cpp ${CORE_SOURCES})
+pybind11_add_module(coverage_path_planner src/python_wrapper.cpp ${CORE_SOURCES})
 
 # Wichtig für scikit-build-core
-install(TARGETS planner_module LIBRARY DESTINATION .)
+install(TARGETS coverage_path_planner LIBRARY DESTINATION .)
 
 # -----------------------------------------------------------------------------
 # 4. Plattform-Spezifische Einstellungen
