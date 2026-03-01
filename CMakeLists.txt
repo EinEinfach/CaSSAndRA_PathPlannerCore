@@ -50,12 +50,21 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "python_wrapper.cpp")
 
 # Standalone App: Nur bauen, wenn wir NICHT für ein Python-Wheel (SKBUILD) kompilieren
 if(NOT SKBUILD)
-    # Da die Standalone-App nlohmann/json braucht, suchen wir sie auch nur hier
-    find_package(nlohmann_json QUIET) 
-    
+   message(STATUS "Standalone-Modus: Baue App und Tests...")
+    # A. Standalone App (benötigt nlohmann/json)
+    # Hier nur add_executable, wenn die Header wirklich da sind
     add_executable(CoveragePlanner main.cpp ${CORE_SOURCES})
-    # Falls nlohmann_json gefunden wurde, verlinken (oder Header-Pfad nutzen)
-    # target_link_libraries(CoveragePlanner PRIVATE nlohmann_json::nlohmann_json)
+
+    # B. Google Tests
+    enable_testing()
+    find_package(GTest)
+    if(GTest_FOUND)
+        file(GLOB TEST_SOURCES "tests/*.cpp")
+        if(TEST_SOURCES)
+            add_executable(run_tests ${TEST_SOURCES} ${CORE_SOURCES})
+            target_link_libraries(run_tests GTest::gtest_main GTest::gtest)
+        endif()
+    endif()
 endif()
 
 # Python Modul: Wird immer gebaut (auch im Wheel)
