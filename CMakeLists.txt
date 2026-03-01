@@ -10,26 +10,35 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Python & pybind11 Suche (Venv-aware)
 # -----------------------------------------------------------------------------
 
-# Falls -DPython_EXECUTABLE beim Aufruf nicht mitgegeben wurde, 
-# versuchen wir die .venv im Projektverzeichnis zu nutzen
-if(NOT Python_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
-    set(Python_EXECUTABLE "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
+# -----------------------------------------------------------------------------
+# 1. Python & pybind11 Suche
+# -----------------------------------------------------------------------------
+
+if(NOT SKBUILD)
+    # Lokaler Build: Suche Python wie bisher (für venv)
+    if(NOT Python_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
+        set(Python_EXECUTABLE "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    
+    # pybind11 Pfad lokal ermitteln
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c "import pybind11; print(pybind11.get_cmake_dir())"
+        OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(PYBIND11_CMAKE_DIR)
+        list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
+    endif()
+else()
+    # Wheel-Build via scikit-build-core: 
+    # Wir brauchen find_package(Python3) hier GAR NICHT, 
+    # da scikit-build-core die Pfade bereits gesetzt hat.
+    message(STATUS "SKBUILD erkannt: Überspringe manuelle Python-Suche")
 endif()
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-
-# Trick: pybind11 fragen, wo seine CMake-Dateien liegen
-execute_process(
-    COMMAND "${Python3_EXECUTABLE}" -c "import pybind11; print(pybind11.get_cmake_dir())"
-    OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
-
-if(PYBIND11_CMAKE_DIR)
-    list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
-endif()
-
+# pybind11 wird immer benötigt
 find_package(pybind11 REQUIRED)
 
 # -----------------------------------------------------------------------------
