@@ -2,7 +2,7 @@ name: Build and Publish Python Wheels
 
 on:
   push:
-    branches: [ main ]
+    # branches: [ main ]
     tags:
       - 'v*' # Trigger für PyPI Upload
   pull_request:
@@ -30,7 +30,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.3.1
         env:
           CIBW_BUILD: "${{ matrix.python }}-*"
-          CIBW_ARCHS_LINUX: x86_64 aarch64
+          CIBW_ARCHS_LINUX: x86_64 aarch64 armv7l
           CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_ENVIRONMENT: CMAKE_ARGS="-DPYBIND11_FINDPYTHON=ON"
