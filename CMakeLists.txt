@@ -37,12 +37,17 @@ find_package(pybind11 REQUIRED)
 # -----------------------------------------------------------------------------
 include_directories(include)
 
-# Alle Quellen finden
+# Wir suchen alle .cpp Dateien im src Ordner
 file(GLOB_RECURSE ALL_SOURCES "src/*.cpp")
 
-# Trenne Core-Sourcen vom Python-Wrapper
-set(CORE_SOURCES ${ALL_SOURCES})
-list(FILTER CORE_SOURCES EXCLUDE REGEX "python_wrapper.cpp")
+# Wir filtern den Wrapper und den Reader EXAKT aus
+set(CORE_SOURCES "")
+foreach(_source ${ALL_SOURCES})
+    # Schließe den Python Wrapper und den GeoJSONReader aus den Core-Sourcen aus
+    if(NOT _source MATCHES "python_wrapper.cpp" AND NOT _source MATCHES "GeoJSONReader.cpp")
+        list(APPEND CORE_SOURCES ${_source})
+    endif()
+endforeach()
 
 # -----------------------------------------------------------------------------
 # 3. Targets
@@ -51,9 +56,10 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "python_wrapper.cpp")
 # Standalone App: Nur bauen, wenn wir NICHT für ein Python-Wheel (SKBUILD) kompilieren
 if(NOT SKBUILD)
    message(STATUS "Standalone-Modus: Baue App und Tests...")
-    # A. Standalone App (benötigt nlohmann/json)
+    # A. Standalone App (benötigt nlohmann/json und GeoJSONReader.cpp)
+    set(APP_SOURCES ${CORE_SOURCES} "src/GeoJSONReader.cpp")
     # Hier nur add_executable, wenn die Header wirklich da sind
-    add_executable(CoveragePlanner main.cpp ${CORE_SOURCES})
+    add_executable(CoveragePlanner main.cpp ${APP_SOURCES})
 
     # B. Google Tests
     enable_testing()
