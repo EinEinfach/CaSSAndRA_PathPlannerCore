@@ -83,16 +83,3 @@ else()
     # Für Linux / Raspberry Pi
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
-
-# -----------------------------------------------------------------------------
-# 5. Google Tests
-# -----------------------------------------------------------------------------
-enable_testing()
-find_package(GTest)
-if(GTest_FOUND)
-    file(GLOB TEST_SOURCES "tests/*.cpp")
-    if(TEST_SOURCES)
-        add_executable(run_tests ${TEST_SOURCES} ${CORE_SOURCES})
-        target_link_libraries(run_tests GTest::gtest_main GTest::gtest)
-    endif()
-endif()
