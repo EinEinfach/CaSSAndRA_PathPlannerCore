@@ -22,6 +22,7 @@ namespace Planner
     public:
         LineString() = default;
         LineString(std::initializer_list<Point> pts);
+        LineString(std::vector<Point> pts) : points(std::move(pts)) {};
 
         void addPoint(Point p);
 
