@@ -5,12 +5,15 @@
 ## 🇬🇧 English
 
 ## Overview
+
+In the world of autonomous mowing, the shortest path is rarely the best one. Unlike a vacuum robot that simply needs to get from A to B, a robotic mower is an artist: ***the path itself is the goal***. A perfectly mowed lawn is defined by the elegance of its lines and the consistency of its pattern.
+
+While many path planners available online focus on classic "Point A to Point B" navigation or simple obstacle avoidance, the ***CaSSAndRA Path Planner Core*** is built for a different purpose. It addresses the ***Complete Coverage Path Planning (CCPP)*** problem with a focus on visual results and geometric precision. It ensures that every blade of grass is reached while maintaining a structured, professional look—whether in classic parallel lines, concentric rings, or sophisticated squares.
+
 <img src="./doc/preview.svg" width="600">
 
 
 This project provides a high-performance path planning engine written in C++, specifically designed for autonomous robotic lawnmowers (inspired by the CaSSAndRA project).
-
-It solves the **Complete Coverage Path Planning (CCPP)** problem, allowing a robot to efficiently cover a defined area while avoiding obstacles (exclusions).
 
 ### Key Features
 
@@ -135,10 +138,11 @@ clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_te
 
 ## Überblick
 
-Dieses Projekt bietet eine Hochleistungs-Pfadplanungs-Engine in C++, die speziell für autonome Rasenmäher-Roboter entwickelt wurde.
+In der Welt des autonomen Mähens ist der kürzeste Weg selten das Ziel. Anders als bei einem Staubsaugerroboter, der lediglich effizient von A nach B kommen muss, ist ein Mähroboter ein Künstler: ***Der Weg ist das Ziel.*** Ein perfekt gepflegter Rasen definiert sich über die Eleganz seiner Bahnen und die Gleichmäßigkeit seines Musters.
 
-Es löst das Problem der vollständigen Flächenabdeckung  
-(**Complete Coverage Path Planning – CCPP**) und ermöglicht es einem Roboter, definierte Flächen effizient zu mähen, während Hindernisse (Exclusions) umfahren werden.
+Viele Planungs-Algorithmen im Internet konzentrieren sich primär auf die klassische Navigation von "Punkt A zu Punkt B" oder einfache Hindernisumfahrung. Der ***CaSSAndRA Path Planner Core*** wurde für einen anderen Zweck erschaffen. Er löst das Problem der vollständigen Flächenabdeckung (***Complete Coverage Path Planning – CCPP***) mit einem klaren Fokus auf visuelle Ergebnisse und geometrische Präzision. Er stellt sicher, dass jeder Grashalm erreicht wird, während ein strukturiertes, professionelles Schnittbild erhalten bleibt – egal ob in klassischen parallelen Bahnen, konzentrischen Ringen oder präzisen Quadraten.
+
+Dieses Projekt bietet eine Hochleistungs-Pfadplanungs-Engine in C++, die speziell für autonome Rasenmäher-Roboter entwickelt wurde.
 
 ### Hauptmerkmale
 
