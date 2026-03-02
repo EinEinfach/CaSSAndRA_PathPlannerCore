@@ -9,7 +9,7 @@ using namespace Planner;
 
 PYBIND11_MODULE(coverage_path_planner, m)
 {
-    m.doc() = "C++ Path Planner Module für Python UI";
+    m.doc() = "Complete Coverage Path Planner (CCPP) with a focus on visual results and geometric precision (inspiered by CaSSAndRA project)";
 
     // 1. Point
     py::class_<Point>(m, "Point")

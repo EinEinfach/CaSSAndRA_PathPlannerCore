@@ -258,16 +258,6 @@ clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_te
 ./planner_test
 ```
 
----
-
-### Python-Anbindung
-
-Der Kern wird als Python-Modul (`coverage_path_planner`) kompiliert und eingebunden.
-
-
-
----
-
 ## Technical Requirements (only for develpment) / Anforderungen (nur für Entwicklung)
 
 - C++20 Compiler (Clang, GCC)
