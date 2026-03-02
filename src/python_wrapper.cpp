@@ -22,12 +22,14 @@ PYBIND11_MODULE(coverage_path_planner, m)
     // 2. LineString (Basis für Path und Polygon)
     py::class_<LineString>(m, "LineString")
         .def(py::init<>())
+        .def(py::init<std::vector<Point>>())
         .def("getPoints", &LineString::getPoints)
         .def("addPoint", &LineString::addPoint);
 
     // 3. Polygon
     py::class_<Polygon, LineString>(m, "Polygon")
         .def(py::init<>())
+        .def("getPoints", &Polygon::getPoints)
         .def(py::init<std::vector<Point>>());
 
     // 4. Environment
