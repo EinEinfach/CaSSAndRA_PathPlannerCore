@@ -7,30 +7,79 @@
 ## Overview
 <img src="./doc/preview.svg" width="600">
 
+
 This project provides a high-performance path planning engine written in C++, specifically designed for autonomous robotic lawnmowers (inspired by the CaSSAndRA project).
 
 It solves the **Complete Coverage Path Planning (CCPP)** problem, allowing a robot to efficiently cover a defined area while avoiding obstacles (exclusions).
 
 ### Key Features
 
-- **Multiple Patterns**  
-  Supports:
-  - "Lines" (parallel zig-zag mowing)
-  - "Rings" (concentric mowing)
-  - "Squares"
+- **Multiple Patterns: Lines (zig-zag), Rings (concentric), and Squares.**  
 
-- **Clipper2 Integration**  
-  Uses the state-of-the-art Clipper2 library for robust polygon offsetting and clipping.
+- **High Performance: Core engine written in C++20**  
 
-- **Python Binding**  
-  Seamless integration into Python environments via pybind11.
+- **Clipper2 Integration: Robust polygon offsetting and clipping**  
 
-- **GeoJSON Support**  
-  Easily load map data from standard GeoJSON formats. An example file is located in the root directory.
+- **Python Binding: Seamless integration via pybind11**  
 
----
+- **Cross-Platform: Supports Windows, macOS, and Linux (including Raspberry Pi 32-bit & 64-bit).**  
 
-## Usage
+
+### Installation
+
+The easiest way to use the planner in Python is via pip:
+
+```bash
+pip install coverage-path-planner
+```
+> **Note:**  
+> This will install pre-compiled binaries for your architecture. No C++ compiler is required on the target system.
+
+### Python usage example
+
+```python
+import coverage_path_planner as cpp
+
+# Setup environment
+# Create perimeter polygon and create environment 
+peri = cpp.Polygon([cpp.Point(0,0), cpp.Point(10,0), cpp.Point(10,10), cpp.Point(0,10)])
+env = cpp.Environment(peri)
+
+# Add obstacles to environment (optional)
+obs = cpp.Polygon([cpp.Point(3, 3), cpp.Point(3, 4), cpp.Point(4, 4)])
+env.addObstacle(obs)
+
+# Set virtual wire (optional): valid points for A* calculation. If no virtual wire added A* uses obstacle an perimeter points for search
+search_wire = cpp.LineString()
+search_wire.addPoint(cpp.Point(1, 1))
+search_wire.addPoint(cpp.Point(9, 1))
+env.setVirtualWire(search_wire) 
+
+# Add working areas (optional). If no working areas added whole perimeter will be covered
+work_area = cpp.Polygon([cpp.Point(-1, -1), cpp.Point(-1, 9), cpp.Point(9, 2)])
+env.addMowArea(work_area)
+
+# Configure settings
+settings = cpp.PathSettings()
+settings.pattern = "lines"  # possible patterns: lines, squares, rings
+settings.offset = 0.18      # distance between coverage lines
+settings.angle = 0.5        # coverage angle (RAD)
+settings.distanceToBorder = 0.4   # distance to border
+settings.mowArea = True       # cover area
+settings.mowBorder = True     # calculate border laps (borderLaps must be > 0)
+settings.mowBorderCcw = True  # border laps counter clockwise?
+settings.borderLaps = 2       # how many border laps (every new lap gets offset of settings.offset)
+settings.mowExclusionsBoder = True  # calculate exclusions laps (exclusionsBorderLaps must be > 0)
+settings.mowExclusionsBorderCcw = True  # exclusions laps counter clockwise?
+settings.exclusionsBorderLaps = 2       # how many exclusions laps (every new lap gets offset of settings.offset)
+
+# Compute path
+service = cpp.PathService()
+result = service.computeFullTask(env, settings, cpp.Point(5, 5))
+print(result.path.getPoints())
+```
+
+## Developement & Advanced Build
 
 ### Build & Development (Makefile)
 The project includes a Makefile (tested on macOS) to simplify the build process for different targets.
@@ -66,6 +115,9 @@ make
 To test the planner without Python, use the provided `main.cpp` debug script.  
 It reads a `example_map.json` and calculates the path directly.
 
+- **GeoJSON Support**  
+  Easily load map data from standard GeoJSON formats. An example file is located in the root directory.
+
 > **Note:**  
 > When running in standalone mode, the planner automatically generates an SVG file named `test_map.svg` in the root directory for visual verification of the calculated path and geometry.
 
@@ -76,28 +128,6 @@ clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_te
 ./planner_test
 ```
 
----
-
-### Python Integration
-
-The core is designed to be compiled as a Python module (`coverage_path_planner`).
-
-```python
-import coverage_path_planner as pm
-
-# Setup environment
-peri = pm.Polygon([(0,0), (10,0), (10,10), (0,10)])
-env = pm.Environment(peri)
-
-# Configure settings
-settings = pm.PathSettings()
-settings.pattern = "lines"
-settings.offset = 0.18
-
-# Compute path
-service = pm.PathService()
-result = service.computeFullTask(env, settings, pm.Point(5, 5))
-```
 
 ---
 
@@ -112,23 +142,71 @@ Es löst das Problem der vollständigen Flächenabdeckung
 
 ### Hauptmerkmale
 
-- **Mäh-Muster**
-  - "Lines" (parallele Bahnen)
-  - "Rings" (konzentrische Ringe)
-  - "Squares"
+- **Unterschiedliche Muster: linesLines (zig-zag), Rings (concentric), and Squares**
 
-- **Clipper2 Integration**  
-  Nutzt die Clipper2-Bibliothek für robustes Polygon-Offsetting.
+- **Sehr schnell: Core engine geschrieben in C++20**  
 
-- **Python-Anbindung**  
-  Nahtlose Integration in Python-Anwendungen mittels pybind11.
+- **Nutzt clipper2 Bibliothek für robuste Polygonberechnungen**  
+  
+- **Nahtlose Integration in Python-Anwendungen mittels pybind11.** 
 
-- **GeoJSON Support**  
-  Lädt Kartendaten direkt aus dem standardisierten GeoJSON-Format. Eine Beispiel Datei ist im Root-Verzeichnis vorhanden.
+- **Unterschiedliche Platformen: Unterstützt Windows, macOS und Linux (inkl. Raspberry PI 32-bit & 64-bit)** 
 
----
 
-## Benutzung
+### Installation
+
+Der einfachste Weg den Planner zu nutzen ist die Installation über pip:
+
+```bash
+pip install coverage-path-planner
+```
+> **Hinweis:**  
+> Es wird eine vorkompilierte version des Planners installiert. Kein C++ Compiler auf dem Zielsystem notwendig. 
+
+### Python Bespiel
+
+```python
+import coverage_path_planner as cpp
+
+# Umgebung erstellen
+peri = cpp.Polygon([cpp.Point(0,0), cpp.Point(10,0), cpp.Point(10,10), cpp.Point(0,10)])
+env = cpp.Environment(peri)
+
+# Füge Hindernisse hinzu (optional)
+obs = cpp.Polygon([cpp.Point(3, 3), cpp.Point(3, 4), cpp.Point(4, 4)])
+env.addObstacle(obs)
+
+# Setze virtuellen Draht (optional). Wird für A* Suche verwendet, wenn kein virtueller Draht vorhanden ist, dass verwedet A* Perimeter- und Hindernis-Punkte für Wegsuche
+search_wire = cpp.LineString()
+search_wire.addPoint(cpp.Point(1, 1))
+search_wire.addPoint(cpp.Point(9, 1))
+env.setVirtualWire(search_wire) 
+
+# Füge Arbeitsbereiche hinzu (optional). Wenn keine Arbeitsbereiche festgelegt sind, wird komplette Fläche bearbeitet
+work_area = cpp.Polygon([cpp.Point(-1, -1), cpp.Point(-1, 9), cpp.Point(9, 2)])
+env.addMowArea(work_area)
+
+# Definiere Arbeitseinstellungen
+settings = cpp.PathSettings()
+settings.pattern = "lines"  # welche Muster ist gewünscht: lines, squares, rings
+settings.offset = 0.18      # Abstand zwischen den Linien
+settings.angle = 0.5        # Im welchen Winkel sollen die Linien verlaufen (RAD)
+settings.distanceToBorder = 0.4   # Abstand zu Perimetergrenze
+settings.mowArea = True       # Soll Fläche abgearbeitet werden
+settings.mowBorder = True     # Soll die Perimeterkante abgefahren werden (borderLaps muss > 0 sein)
+settings.mowBorderCcw = True  # Soll gegen Uhrzeigersinn abgefahren werden? 
+settings.borderLaps = 2       # Wie viele Runde für Perimetergrenze (jede neue Runde wird um den settings.offset versetzt abgefahren)
+settings.mowExclusionsBoder = True  # Sollen die Hindernissgrenzen abgefahren werden (exclusionsBorderLaps muss > 0 sein)
+settings.mowExclusionsBorderCcw = True  #Soll gegen Uhrzeigersinn abgefahren werden?
+settings.exclusionsBorderLaps = 2       # Wie viele Runden für Hindernissgrenzen (jede neue Runde wird um den settings.offset versetzt abgefahren)
+
+# Compute path
+service = cpp.PathService()
+result = service.computeFullTask(env, settings, cpp.Point(5, 5))
+print(result.path.getPoints())
+```
+
+### Entwicklung & fortgeschrittene Build
 
 ### Build & Entwicklung (Makefile)
 Das Projekt enthält ein Makefile (getestet unter macOS), um die verschiedenen Build-Ziele einfach zu verwalten.
@@ -163,6 +241,9 @@ make
 Um den Planner ohne Python zu testen, kann das `main.cpp` Debug-Script genutzt werden.  
 Es liest eine `example_map.json` ein und berechnet den Pfad direkt.
 
+- **GeoJSON Support**  
+  Lädt Kartendaten direkt aus dem standardisierten GeoJSON-Format. Eine Beispiel Datei ist im Root-Verzeichnis vorhanden.
+
 > **Hinweis:**  
 > Im Stand-alone-Modus erzeugt der Planner automatisch eine SVG-Datei namens `test_map.svg` im Stammverzeichnis zur visuellen Kontrolle des berechneten Pfads.
 
@@ -179,28 +260,11 @@ clang++ -std=c++20 -O3 -Iinclude -I/opt/homebrew/include src/*.cpp -o planner_te
 
 Der Kern wird als Python-Modul (`coverage_path_planner`) kompiliert und eingebunden.
 
-```python
-import math
-import coverage_path_planner as pm
 
-# Umgebung erstellen
-perimeter = pm.Polygon([(0,0), (20,0), (20,20), (0,20)])
-env = pm.Environment(perimeter)
-
-# Einstellungen festlegen
-settings = pm.PathSettings()
-settings.angle = math.radians(45)  # Rotation unterstützen
-settings.offset = 0.18             # Messerbreite
-
-# Pfad berechnen
-service = pm.PathService()
-start_pos = pm.Point(1, 1)
-result = service.computeFullTask(env, settings, start_pos)
-```
 
 ---
 
-## Technical Requirements / Anforderungen
+## Technical Requirements (only for develpment) / Anforderungen (nur für Entwicklung)
 
 - C++20 Compiler (Clang, GCC)
 - nlohmann-json (for GeoJSON support)
