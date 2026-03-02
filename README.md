@@ -59,7 +59,7 @@ search_wire.addPoint(cpp.Point(9, 1))
 env.setVirtualWire(search_wire) 
 
 # Add working areas (optional). If no working areas added whole perimeter will be covered
-work_area = cpp.Polygon([cpp.Point(-1, -1), cpp.Point(-1, 9), cpp.Point(9, 2)])
+work_area = cpp.Polygon([cpp.Point(2, 2), cpp.Point(2, 6), cpp.Point(8, 6), cpp.Point(8, 2)])
 env.addMowArea(work_area)
 
 # Configure settings
@@ -187,7 +187,7 @@ search_wire.addPoint(cpp.Point(9, 1))
 env.setVirtualWire(search_wire) 
 
 # Füge Arbeitsbereiche hinzu (optional). Wenn keine Arbeitsbereiche festgelegt sind, wird komplette Fläche bearbeitet
-work_area = cpp.Polygon([cpp.Point(-1, -1), cpp.Point(-1, 9), cpp.Point(9, 2)])
+work_area = cpp.Polygon([cpp.Point(2, 2), cpp.Point(2, 6), cpp.Point(8, 6), cpp.Point(8, 2)])
 env.addMowArea(work_area)
 
 # Definiere Arbeitseinstellungen
