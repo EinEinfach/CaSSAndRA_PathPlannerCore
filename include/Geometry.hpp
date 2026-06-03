@@ -22,6 +22,7 @@ namespace Planner
     public:
         LineString() = default;
         LineString(std::initializer_list<Point> pts);
+        LineString(std::vector<Point> pts) : points(std::move(pts)) {};
 
         void addPoint(Point p);
 
@@ -38,11 +39,9 @@ namespace Planner
     class Polygon : public LineString
     {
     public:
-        using LineString::LineString;
-        Polygon(const std::vector<Point> &pts)
-        {
-            this->points = pts;
-        }
+        Polygon() = default;
+        Polygon(std::initializer_list<Point> pts) : LineString(pts) {};
+        Polygon(const std::vector<Point> &pts) : LineString(pts) {};
         bool isClosed() const;
     };
 

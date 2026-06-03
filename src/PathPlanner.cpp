@@ -56,7 +56,7 @@ namespace Planner
         };
 
         // 2. Scanline Loop
-        for (double y = minY->y + spacing; y < maxY->y; y += spacing)
+        for (double y = minY->y + spacing/2; y < maxY->y; y += spacing)
         {
             std::vector<double> x_intersections;
 
