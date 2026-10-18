@@ -120,11 +120,11 @@ TEST(PathPlannerTest, GenerateSlices_ObstacleSplitsSlice)
 
     auto slices = planner.generateSlices(env, spacing);
 
-    // Suche Slices auf der Höhe y=3.0 (mitten durch das Hindernis)
+    // Suche Slices auf der Höhe y=3.5 (durch das Hindernis; die erste Linie liegt bei minY + spacing/2)
     int slicesAtY3 = 0;
     for (const auto &slice : slices)
     {
-        if (std::abs(slice.getPoints()[0].y - 3.0) < 1e-7)
+        if (std::abs(slice.getPoints()[0].y - 3.5) < 1e-7)
         {
             slicesAtY3++;
             // Sicherstellen, dass kein Punkt im Hindernis liegt (x zwischen 2 und 4)
@@ -160,11 +160,13 @@ TEST(PathPlannerTest, GenerateSlices_SliceOnPerimeterEdge)
 {
     Environment env = getEnv();
     PathPlanner planner;
-    double spacing = 1.0;
+    // Die erste Linie liegt bei minY + spacing/2 = -5 + 2 = -3, genau auf der Kante
+    double spacing = 4.0;
 
     auto slices = planner.generateSlices(env, spacing);
-    LineString &edgeSlice = slices[1];
-    LineString &roomSlice = slices[2];
+    ASSERT_GE(slices.size(), 2UL);
+    LineString &edgeSlice = slices[0];
+    LineString &roomSlice = slices[1];
 
     EXPECT_NEAR(edgeSlice.getPoints()[0].x, -5.0, 1e-7);
     EXPECT_NEAR(edgeSlice.getPoints()[1].x, -3.0, 1e-7);
@@ -179,12 +181,12 @@ TEST(PathPlannerTest, GenerateSlices_SliceThroughPerimeterCoord)
     Polygon perimeter = {{-1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {0.0, -1.0}};
     Environment env = Environment(perimeter);
     PathPlanner planner;
-    double spacing = 1.0;
+    // Die erste Linie liegt bei minY + spacing/2 = -1 + 1 = 0, genau durch die Ecken
+    double spacing = 2.0;
 
     auto slices = planner.generateSlices(env, spacing);
-    LineString &slice = slices[0];
-
     ASSERT_GE(slices.size(), 1UL);
+    LineString &slice = slices[0];
     EXPECT_NEAR(slice.getPoints()[0].x, -1.0, 1e-7);
     EXPECT_NEAR(slice.getPoints()[1].x, 1.0, 1e-7);
 }
