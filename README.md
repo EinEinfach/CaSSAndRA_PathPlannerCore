@@ -72,7 +72,7 @@ settings.mowArea = True       # cover area
 settings.mowBorder = True     # calculate border laps (borderLaps must be > 0)
 settings.mowBorderCcw = True  # border laps counter clockwise?
 settings.borderLaps = 2       # how many border laps (every new lap gets offset of settings.offset)
-settings.mowExclusionsBoder = True  # calculate exclusions laps (exclusionsBorderLaps must be > 0)
+settings.mowExclusionsBorder = True  # calculate exclusions laps (exclusionsBorderLaps must be > 0)
 settings.mowExclusionsBorderCcw = True  # exclusions laps counter clockwise?
 settings.exclusionsBorderLaps = 2       # how many exclusions laps (every new lap gets offset of settings.offset)
 
@@ -112,6 +112,13 @@ cmake -B build -DPython_EXECUTABLE=$(pwd)/.venv/bin/python3
 cd build
 make
 ```
+
+### C API (e.g. for Go via cgo)
+
+`include/planner_c.h` exposes the planner with flat C types: `planner_compute` (coverage path) and
+`planner_find_path` (A* way between two points, e.g. for goto). No C++ exception crosses the boundary;
+errors come back as a status code and a message. Results are released with `planner_free_path`.
+Build it as a static library without Python: `cmake -B build -DPLANNER_BUILD_PYTHON=OFF && cmake --build build --target planner_core`.
 
 ### Standalone (C++)
 
@@ -200,7 +207,7 @@ settings.mowArea = True       # Soll Fläche abgearbeitet werden
 settings.mowBorder = True     # Soll die Perimeterkante abgefahren werden (borderLaps muss > 0 sein)
 settings.mowBorderCcw = True  # Soll gegen Uhrzeigersinn abgefahren werden? 
 settings.borderLaps = 2       # Wie viele Runde für Perimetergrenze (jede neue Runde wird um den settings.offset versetzt abgefahren)
-settings.mowExclusionsBoder = True  # Sollen die Hindernissgrenzen abgefahren werden (exclusionsBorderLaps muss > 0 sein)
+settings.mowExclusionsBorder = True  # Sollen die Hindernissgrenzen abgefahren werden (exclusionsBorderLaps muss > 0 sein)
 settings.mowExclusionsBorderCcw = True  #Soll gegen Uhrzeigersinn abgefahren werden?
 settings.exclusionsBorderLaps = 2       # Wie viele Runden für Hindernissgrenzen (jede neue Runde wird um den settings.offset versetzt abgefahren)
 
@@ -239,6 +246,13 @@ cmake -B build -DPython_EXECUTABLE=$(pwd)/.venv/bin/python3
 cd build
 make
 ```
+
+### C-API (z. B. für Go über cgo)
+
+`include/planner_c.h` bietet den Planner mit flachen C-Typen an: `planner_compute` (Mähroute) und
+`planner_find_path` (A*-Weg zwischen zwei Punkten, z. B. für Goto). Keine C++-Exception verlässt die Funktionen;
+Fehler kommen als Statuscode mit Meldung zurück. Ergebnisse werden mit `planner_free_path` freigegeben.
+Als statische Library ohne Python: `cmake -B build -DPLANNER_BUILD_PYTHON=OFF && cmake --build build --target planner_core`.
 
 ### Eigenständig (C++)
 

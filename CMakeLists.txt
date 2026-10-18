@@ -6,40 +6,38 @@ set(PYBIND11_FINDPYTHON ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# -----------------------------------------------------------------------------
-# 1. Python & pybind11 Suche (Venv-aware)
-# -----------------------------------------------------------------------------
+# Das Python-Modul braucht pybind11. Für reine C/C++-Nutzer (z. B. Go über die
+# C-API in include/planner_c.h) abschaltbar: -DPLANNER_BUILD_PYTHON=OFF
+option(PLANNER_BUILD_PYTHON "Build the Python module (needs pybind11)" ON)
 
 # -----------------------------------------------------------------------------
 # 1. Python & pybind11 Suche
 # -----------------------------------------------------------------------------
 
-if(NOT SKBUILD)
-    # Lokaler Build: Suche Python wie bisher (für venv)
-    if(NOT Python_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
-        set(Python_EXECUTABLE "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
-    endif()
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    
-    # pybind11 Pfad lokal ermitteln
-    execute_process(
-        COMMAND "${Python3_EXECUTABLE}" -c "import pybind11; print(pybind11.get_cmake_dir())"
-        OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    if(PYBIND11_CMAKE_DIR)
-        list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
-    endif()
-else()
-    # Wheel-Build via scikit-build-core: 
-    # Wir brauchen find_package(Python3) hier GAR NICHT, 
-    # da scikit-build-core die Pfade bereits gesetzt hat.
-    message(STATUS "SKBUILD erkannt: Überspringe manuelle Python-Suche")
-endif()
+if(PLANNER_BUILD_PYTHON)
+    if(NOT SKBUILD)
+        # Lokaler Build: Suche Python wie bisher (für venv)
+        if(NOT Python_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
+            set(Python_EXECUTABLE "${CMAKE_SOURCE_DIR}/.venv/bin/python3")
+        endif()
+        find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
-# pybind11 wird immer benötigt
-find_package(pybind11 REQUIRED)
+        # pybind11 Pfad lokal ermitteln
+        execute_process(
+            COMMAND "${Python3_EXECUTABLE}" -c "import pybind11; print(pybind11.get_cmake_dir())"
+            OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(PYBIND11_CMAKE_DIR)
+            list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
+        endif()
+    else()
+        # Wheel-Build via scikit-build-core: Pfade sind bereits gesetzt.
+        message(STATUS "SKBUILD erkannt: Überspringe manuelle Python-Suche")
+    endif()
+    find_package(pybind11 REQUIRED)
+endif()
 
 # -----------------------------------------------------------------------------
 # 2. Quellen & Header
@@ -82,11 +80,17 @@ if(NOT SKBUILD)
     endif()
 endif()
 
-# Python Modul: Wird immer gebaut (auch im Wheel)
-pybind11_add_module(coverage_path_planner src/python_wrapper.cpp ${CORE_SOURCES})
+# C. Statische Library mit C-API (include/planner_c.h), ohne Python
+add_library(planner_core STATIC ${CORE_SOURCES})
+target_include_directories(planner_core PUBLIC include)
+set_target_properties(planner_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# Wichtig für scikit-build-core
-install(TARGETS coverage_path_planner LIBRARY DESTINATION .)
+# D. Python Modul (auch im Wheel)
+if(PLANNER_BUILD_PYTHON)
+    pybind11_add_module(coverage_path_planner src/python_wrapper.cpp ${CORE_SOURCES})
+    # Wichtig für scikit-build-core
+    install(TARGETS coverage_path_planner LIBRARY DESTINATION .)
+endif()
 
 # -----------------------------------------------------------------------------
 # 4. Plattform-Spezifische Einstellungen

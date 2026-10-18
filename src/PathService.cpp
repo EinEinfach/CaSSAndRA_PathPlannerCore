@@ -102,7 +102,7 @@ namespace Planner
         }
 
         // Teil 3 Bearbeite exclusions
-        if (settings.mowExclusionsBoder && settings.exclusionsBorderLaps > 0)
+        if (settings.mowExclusionsBorder && settings.exclusionsBorderLaps > 0)
         {
             auto exclusionsSlices = PathPlanner::filterRings(PathPlanner::generateRingSlices(workEnv, settings.offset, settings.exclusionsBorderLaps), true);
             // Wir prüfen noch die Einstellungen CW und CCW (Normalerweise sind die Exclusions CW gedreht). Wenn CCW gewünscht ist drehen wir die nochmal

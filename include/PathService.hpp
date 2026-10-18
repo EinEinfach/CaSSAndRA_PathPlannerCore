@@ -16,7 +16,7 @@ namespace Planner
         bool mowBorder = true;
         bool mowBorderCcw = false;
         size_t borderLaps = 3;
-        bool mowExclusionsBoder = true;
+        bool mowExclusionsBorder = true;
         bool mowExclusionsBorderCcw = false;
         size_t exclusionsBorderLaps = 2;
     };
@@ -33,7 +33,7 @@ namespace Planner
         std::string getVersion();
 
     private:
-        std::string version = "1.3";
+        std::string version = "1.4";
         // Interne Hilfsmethoden zur Strukturierung
         void rotateResult(PathPlanner::PlanningResult &planningResult, const PathSettings &settings);
     };

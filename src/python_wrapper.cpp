@@ -52,7 +52,9 @@ PYBIND11_MODULE(coverage_path_planner, m)
         .def_readwrite("mowBorder", &PathSettings::mowBorder)
         .def_readwrite("borderLaps", &PathSettings::borderLaps)
         .def_readwrite("mowBorderCcw", &PathSettings::mowBorderCcw)
-        .def_readwrite("mowExclusionsBoder", &PathSettings::mowExclusionsBoder)
+        .def_readwrite("mowExclusionsBorder", &PathSettings::mowExclusionsBorder)
+        // Old misspelled name, kept so existing callers (CaSSAndRA 0.x) keep working
+        .def_readwrite("mowExclusionsBoder", &PathSettings::mowExclusionsBorder)
         .def_readwrite("exclusionsBorderLaps", &PathSettings::exclusionsBorderLaps)
         .def_readwrite("mowExclusionsBorderCcw", &PathSettings::mowExclusionsBorderCcw)
         .def_readwrite("pattern", &PathSettings::pattern);

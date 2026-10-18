@@ -56,7 +56,7 @@ TEST_F(PathServiceTest, OnlyExclusionMowing)
     PathSettings settings;
     settings.mowArea = false;
     settings.mowBorder = false;
-    settings.mowExclusionsBoder = true;
+    settings.mowExclusionsBorder = true;
     settings.exclusionsBorderLaps = 1;
     settings.offset = 1.0;
 

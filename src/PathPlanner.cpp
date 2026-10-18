@@ -698,6 +698,12 @@ namespace Planner
         4. Die Bewegung innerhalb des virtual Wires ignoriert den isPathClear Bedingung
     */
 
+    std::vector<Point> PathPlanner::findPath(Point start, Point goal, const Environment &env)
+    {
+        std::vector<LineString> debugLines;
+        return findAStarPath(start, goal, env, debugLines);
+    }
+
     std::vector<Point> PathPlanner::findAStarPath(Point start, Point goal, const Environment &env, std::vector<LineString> &debugLines)
     {
         auto navNodes = prepareNavigationGraph(goal, env);

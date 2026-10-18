@@ -27,7 +27,7 @@ int main()
     settings.mowBorder = true;              // Sollen die Grenzen des Perimeters abgefahren werden (in Kombination mit borderLaps)
     settings.mowBorderCcw = true;           // Soll die Perimetergrenze gegen Uhrzeigersinn abgefahren werden
     settings.borderLaps = 2;                // Wie veile Runden für Perimetergrenze, jede neue Runde versetzt um den Offset (in Kombination mit mowBorder)
-    settings.mowExclusionsBoder = true;     // Soll die Exclusiongrenze abgefahren werden (in Kombination mit mowExclusionsBorderLaps)
+    settings.mowExclusionsBorder = true;     // Soll die Exclusiongrenze abgefahren werden (in Kombination mit mowExclusionsBorderLaps)
     settings.mowExclusionsBorderCcw = true; // Soll die Exclusiongrenze gegen Uhrzeigersinn abgefahren werden
     settings.exclusionsBorderLaps = 2;      // Wie viele Runden für Exclusiongrnze, jede neue Runde versetzt um den Offset (in Kombination mit mowExclusionBoder)
 

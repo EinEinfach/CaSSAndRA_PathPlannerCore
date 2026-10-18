@@ -61,6 +61,9 @@ namespace Planner
         static std::vector<LineString> filterRings (const std::vector<LineString> &rings, bool filterForObstacle);
         static PlanningResult connectSlices(const Environment &env, std::vector<LineString> &slices, Point startPos);
         static bool isPathClear(Point a, Point b, const Environment &env);
+        // A* way from start to goal inside the perimeter and around obstacles, preferring the virtual wire.
+        // Empty if the goal cannot be reached.
+        static std::vector<Point> findPath(Point start, Point goal, const Environment &env);
 
     private:
         struct BestNextSegment
